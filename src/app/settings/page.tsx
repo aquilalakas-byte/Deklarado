@@ -70,10 +70,12 @@ function Settings() {
 
       <section className={card}>
         <h2 className="font-semibold">About the sources</h2>
+        <p className="mt-1 text-sm text-muted">All sources are checked automatically every 3 hours.</p>
         <ul className="mt-2 space-y-2 text-sm text-muted">
-          <li><strong className="text-text">GMA News – Walang Pasok:</strong> nationwide suspension lists, usually with links to each LGU&apos;s own post. Checked every 3 hours.</li>
-          <li><strong className="text-text">City of San Fernando website:</strong> official announcements (RSS).</li>
-          <li><strong className="text-text">Coming next:</strong> PAGASA typhoon signals, DepEd and PIA.</li>
+          <li><strong className="text-text">GMA News – Walang Pasok:</strong> nationwide suspension lists, usually with links to each LGU&apos;s own post.</li>
+          <li><strong className="text-text">LGU websites:</strong> official posts from San Fernando, Angeles, Guagua and Lubao.</li>
+          <li><strong className="text-text">DepEd:</strong> nationwide suspensions only.</li>
+          <li><strong className="text-text">PAGASA:</strong> Wind Signals for your town, shown as a weather alert. Under Executive Order 130 (2026), automatic suspensions will follow DepEd&apos;s new thresholds once published.</li>
         </ul>
       </section>
 

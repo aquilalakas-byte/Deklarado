@@ -5,6 +5,7 @@ import { AnnouncementCard } from "@/components/AnnouncementCard";
 import { AreaPicker } from "@/components/AreaPicker";
 import { Logo } from "@/components/Header";
 import { DemoBanner, Disclaimer, ErrorBox, LastChecked } from "@/components/Notices";
+import { SignalBanner } from "@/components/SignalBanner";
 import { StatusCard, StatusSkeleton } from "@/components/StatusCard";
 import { affectingCodes, displayName, getArea } from "@/lib/areas";
 import { addDays, manilaToday, shortDate } from "@/lib/dates";
@@ -62,6 +63,8 @@ function Today({ areaCode }: { areaCode: string }) {
         <h1 className="text-xl font-bold tracking-tight">{displayName(area)}</h1>
         <Link href="/settings" className="text-sm text-muted hover:text-text">For {levelNote}</Link>
       </div>
+
+      {data?.signals.filter((s) => s.area_code === areaCode).map((s) => <SignalBanner key={s.area_code} signal={s} />)}
 
       {loading ? (
         <><StatusSkeleton big /><StatusSkeleton /></>

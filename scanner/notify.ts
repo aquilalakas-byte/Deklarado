@@ -95,6 +95,19 @@ export function buildMessage(a: AnnouncementRow, today: string) {
   return { title, body: parts.join(" · "), url: "/", tag: `${a.area_code}-${a.date_covered}` };
 }
 
+export type SignalRow = { area_code: string; level: number; storm: string | null; bulletin_no: string | null; issued: string | null; notified_level: number };
+
+/** "Wind Signal No. 2 raised — San Fernando City" (a weather alert, not a suspension). */
+export function buildSignalMessage(s: SignalRow) {
+  const parts = [s.storm ?? "Tropical cyclone", s.issued ? `PAGASA, issued ${s.issued}` : "PAGASA", "Watch for class suspension announcements."];
+  return {
+    title: `Wind Signal No. ${s.level} raised — ${placeName(s.area_code)}`,
+    body: parts.join(" · "),
+    url: "/",
+    tag: `signal-${s.area_code}`,
+  };
+}
+
 // ─── Sending ─────────────────────────────────────────────────────────────────
 
 function manilaToday(): string {
@@ -117,34 +130,47 @@ export async function sendNotifications(db: SupabaseClient): Promise<{ sent: num
     .is("notified_at", null)
     .order("date_covered");
   if (error) throw new Error(`Loading new announcements: ${error.message}`);
-  if (!pending?.length) return { sent: 0, skipped: null };
 
   // Past dates are old news — mark them done without alerting anyone.
-  const old = pending.filter((a) => a.date_covered < today).map((a) => a.id);
+  const old = (pending ?? []).filter((a) => a.date_covered < today).map((a) => a.id);
   if (old.length) await db.from("announcements").update({ notified_at: new Date().toISOString() }).in("id", old);
-  const fresh = (pending as AnnouncementRow[]).filter((a) => a.date_covered >= today);
-  if (!fresh.length) return { sent: 0, skipped: null };
+  const fresh = ((pending ?? []) as AnnouncementRow[]).filter((a) => a.date_covered >= today);
+
+  // Wind signals that went UP since users were last alerted. Signals that were lifted reset the counter.
+  await db.from("wind_signals").update({ notified_level: 0 }).eq("level", 0).gt("notified_level", 0);
+  const { data: signalRows } = await db.from("wind_signals").select("area_code, level, storm, bulletin_no, issued, notified_level").gt("level", 0);
+  const signals = ((signalRows ?? []) as SignalRow[]).filter((s) => s.level > s.notified_level);
+
+  if (!fresh.length && !signals.length) return { sent: 0, skipped: null };
 
   const { data: subs, error: subErr } = await db.from("push_subscriptions").select("id, endpoint, p256dh, auth, area_code, levels").limit(5000);
   if (subErr) throw new Error(`Loading subscriptions: ${subErr.message}`);
 
   let sent = 0;
   const gone = new Set<number>();
+  async function push(s: SubscriptionRow, payload: string) {
+    try {
+      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 12 * 60 * 60 });
+      sent++;
+    } catch (e) {
+      const code = (e as { statusCode?: number }).statusCode;
+      if (code === 404 || code === 410) gone.add(s.id); // the phone unsubscribed or the app was removed
+      else console.warn(`  ! push failed (${code ?? "?"}): ${(e as Error).message}`);
+    }
+  }
+
   for (const a of fresh) {
     const payload = JSON.stringify(buildMessage(a, today));
-    for (const s of (subs ?? []) as SubscriptionRow[]) {
-      if (gone.has(s.id) || !wantsIt(s, a)) continue;
-      try {
-        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 12 * 60 * 60 });
-        sent++;
-      } catch (e) {
-        const code = (e as { statusCode?: number }).statusCode;
-        if (code === 404 || code === 410) gone.add(s.id); // the phone unsubscribed or the app was removed
-        else console.warn(`  ! push failed (${code ?? "?"}): ${(e as Error).message}`);
-      }
-    }
+    for (const s of (subs ?? []) as SubscriptionRow[]) if (!gone.has(s.id) && wantsIt(s, a)) await push(s, payload);
     await db.from("announcements").update({ notified_at: new Date().toISOString() }).eq("id", a.id);
   }
+
+  for (const sig of signals) {
+    const payload = JSON.stringify(buildSignalMessage(sig));
+    for (const s of (subs ?? []) as SubscriptionRow[]) if (!gone.has(s.id) && s.area_code === sig.area_code) await push(s, payload);
+    await db.from("wind_signals").update({ notified_level: sig.level }).eq("area_code", sig.area_code);
+  }
+
   if (gone.size) await db.from("push_subscriptions").delete().in("id", [...gone]);
   return { sent, skipped: null };
 }

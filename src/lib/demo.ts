@@ -2,7 +2,7 @@
 // Dates are relative to today so the app always has something to show.
 
 import { addDays, manilaToday } from "./dates";
-import type { Announcement } from "./types";
+import type { Announcement, WindSignal } from "./types";
 
 const GMA = "GMA News – Walang Pasok";
 const GMA_URL = "https://www.gmanetwork.com/news/tracking/walang_pasok/";
@@ -19,6 +19,13 @@ const SEEDS: Seed[] = [
   { day: -9, area_code: "035416000", summary: "City of San Fernando, Pampanga - college level only", levels: ["college"], reason: "extreme heat index" },
   { day: 4, area_code: "000000000", summary: "Nationwide - Special non-working day", kind: "holiday", includes_work: true, reason: "national holiday", is_official: true, source_name: "Official Gazette (sample)" },
 ];
+
+/** A sample PAGASA Wind Signal so the banner can be seen in demo mode. */
+export function demoSignals(): WindSignal[] {
+  return [
+    { area_code: "035416000", level: 1, storm: "Tropical Storm SAMPLE", bulletin_no: "5", issued: "11:00 AM today", bulletin_url: "https://bagong.pagasa.dost.gov.ph/tropical-cyclone/severe-weather-bulletin" },
+  ];
+}
 
 export function demoAnnouncements(today = manilaToday()): Announcement[] {
   const now = new Date().toISOString();

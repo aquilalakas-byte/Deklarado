@@ -23,8 +23,9 @@ notifications. The full plan is in [docs/PLAN.md](docs/PLAN.md).
 2. In this folder, run `npm install`.
 3. Create a free [Supabase](https://supabase.com) project. In **SQL Editor**, run these files in order:
    1. `supabase/migrations/0001_init.sql`
-   2. `supabase/seed/0001_areas.sql`
-   3. `supabase/seed/0002_sources.sql`
+   2. `supabase/migrations/0002_wind_signals.sql`
+   3. `supabase/seed/0001_areas.sql`
+   4. `supabase/seed/0002_sources.sql`
 4. Copy `.env.example` to `.env.local` and fill in the keys from **Project Settings → API**.
 5. Run `npm run dev` and open http://localhost:3000.
 
@@ -38,15 +39,29 @@ notifications. The full plan is in [docs/PLAN.md](docs/PLAN.md).
 | `npm run dev` | Start the app on your computer |
 | `npm run build` | Check that the app builds without errors |
 | `node scripts/build-areas.mjs` | Rebuild the area list from the PSGC API |
-| `npm test` | Run the classifier tests |
-| `npm run scan:dry` | Read GMA and show what the scanner finds, without saving |
-| `node scanner/run.ts --dry --debug --days 14` | Same, but show every line it read (for checking the classifier) |
-| `npm run scan` | Read GMA and save results to Supabase (needs `.env.local`) |
+| `npm test` | Run all scanner tests |
+| `npm run scan:dry` | Read all sources and show what the scanner finds, without saving |
+| `node scanner/run.ts --dry --only rss` | Run one stage only (`gma`, `pagasa` or `rss`) |
+| `node scanner/run.ts --dry --debug --days 14` | Show every GMA line it read (for checking the classifier) |
+| `npm run scan` | Read all sources, save to Supabase, send notifications (needs `.env.local`) |
 
 ## The scanner
 
-`scanner/` reads GMA News' Walang Pasok articles, finds Pampanga entries with keyword rules
-(`scanner/classify.ts`), and saves them to the `announcements` table.
+`scanner/run.ts` runs three independent stages — if one source is down, the others still run:
+
+| Stage | Source | What it does |
+|---|---|---|
+| `gma` | GMA News Walang Pasok tracker | Reads suspension lists; `scanner/classify.ts` finds Pampanga entries |
+| `pagasa` | PAGASA Tropical Cyclone Bulletins (PDF) | Works out the Wind Signal for each town (`scanner/sources/pagasa.ts`) → `wind_signals` table |
+| `rss` | Official websites: San Fernando, Angeles, Guagua, Lubao, DepEd | Reads posts; `scanner/classify-post.ts` picks out suspension announcements |
+
+Website list: `scanner/sources/registry.ts` (keep in sync with `supabase/seed/0002_sources.sql`).
+Some sites can't be read automatically — Mabalacat, Apalit, DepEd Region III, PIA (blocked by bot
+protection) and the Province of Pampanga site (no usable feed). Deklarado does not get around bot protection.
+
+**Wind Signals and Executive Order 130:** a signal is shown as a weather alert only. EO 130 (Oct 2026)
+replaced the old automatic suspension-by-signal rules; DepEd will publish new thresholds. When it does,
+fill in `scanner/rules.ts` and signals will automatically create suspension announcements.
 
 It runs automatically every 3 hours with GitHub Actions (`.github/workflows/scan.yml`). For that to work,
 add these secrets in **GitHub → repo → Settings → Secrets and variables → Actions → New repository secret**

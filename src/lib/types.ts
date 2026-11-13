@@ -42,8 +42,19 @@ export type Announcement = {
 
 export type SourceStatus = { name: string; last_checked_at: string | null; last_error: string | null };
 
+/** Current PAGASA Wind Signal for a town (a weather alert, not a suspension). */
+export type WindSignal = {
+  area_code: string;
+  level: number;
+  storm: string | null;
+  bulletin_no: string | null;
+  issued: string | null;
+  bulletin_url: string | null;
+};
+
 export type AnnouncementsResponse = {
   demo: boolean;
   announcements: Announcement[];
+  signals: WindSignal[];
   sources: SourceStatus[];
 };
