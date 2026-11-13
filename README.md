@@ -32,3 +32,20 @@ notifications. The full plan is in [docs/PLAN.md](docs/PLAN.md).
 | `npm run dev` | Start the app on your computer |
 | `npm run build` | Check that the app builds without errors |
 | `node scripts/build-areas.mjs` | Rebuild the area list from the PSGC API |
+| `npm test` | Run the classifier tests |
+| `npm run scan:dry` | Read GMA and show what the scanner finds, without saving |
+| `node scanner/run.ts --dry --debug --days 14` | Same, but show every line it read (for checking the classifier) |
+| `npm run scan` | Read GMA and save results to Supabase (needs `.env.local`) |
+
+## The scanner
+
+`scanner/` reads GMA News' Walang Pasok articles, finds Pampanga entries with keyword rules
+(`scanner/classify.ts`), and saves them to the `announcements` table.
+
+It runs automatically every 3 hours with GitHub Actions (`.github/workflows/scan.yml`). For that to work,
+add two secrets in **GitHub → repo → Settings → Secrets and variables → Actions → New repository secret**:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+You can also start it by hand: **Actions → Scan for suspensions → Run workflow**.

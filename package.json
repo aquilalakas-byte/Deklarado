@@ -2,11 +2,15 @@
   "name": "deklarado",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test scanner/",
+    "scan": "node scanner/run.ts",
+    "scan:dry": "node scanner/run.ts --dry"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",

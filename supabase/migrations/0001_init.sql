@@ -60,14 +60,19 @@ create table if not exists announcements (
   sector       text not null default 'both' check (sector in ('public', 'private', 'both')),
   date_covered date not null,                   -- the day with no classes
   starts_at    time,                            -- null = whole day; e.g. '12:00' for afternoon only
+  f2f_only     boolean not null default false,  -- true = only face-to-face classes suspended (classes move online)
+  includes_work boolean not null default false, -- true = government work is also suspended
   reason       text,                            -- e.g. 'Typhoon', 'Power interruption'
   summary      text not null,                   -- the original line, e.g. 'Taal, Batangas - all levels, public and private'
   source_name  text not null,
-  source_url   text not null,
+  source_url   text not null,                   -- the article we read
+  lgu_post_url text,                            -- the LGU's own post, when the article links to it
   is_official  boolean not null default false,
   notified_at  timestamptz,                     -- set after push notifications are sent
   created_at   timestamptz not null default now(),
-  unique (raw_item_id, area_code, date_covered)
+  updated_at   timestamptz not null default now(),
+  -- One row per place, per day, per source. If the article is updated, the row is updated.
+  unique (area_code, date_covered, source_name)
 );
 
 create index if not exists announcements_area_date_idx on announcements(area_code, date_covered);
