@@ -1,7 +1,7 @@
 # Runs the Deklarado scanner automatically.
-# Needs two repository secrets (GitHub → repo → Settings → Secrets and variables → Actions):
-#   NEXT_PUBLIC_SUPABASE_URL
-#   SUPABASE_SERVICE_ROLE_KEY
+# Needs these repository secrets (GitHub → repo → Settings → Secrets and variables → Actions):
+#   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY          (saving)
+#   NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (notifications)
 
 name: Scan for suspensions
 
@@ -33,7 +33,16 @@ jobs:
         run: npm test
 
       - name: Scan and save
-        run: npm run scan
+        run: |
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]; then
+            echo "::warning::Supabase secrets are not set yet — skipping the save step. Add them in Settings → Secrets and variables → Actions."
+            npm run scan:dry
+            exit 0
+          fi
+          npm run scan
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}

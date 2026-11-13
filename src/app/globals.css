@@ -1,26 +1,89 @@
 @import "tailwindcss";
 
+/* ── Colors ────────────────────────────────────────────────────────────────
+   Every color the app uses lives here, with a dark-mode version below.
+   Use them in classes like bg-surface, text-muted, border-line, bg-danger, bg-alert. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --surface-2: #eef1f8;
+  --text: #0f172a;
+  --muted: #5b6478;
+  --line: #dde2ee;
+  --brand: #1f3fd1;
+  --brand-ink: #ffffff;
+  --brand-soft: #e6ebff;
+  --danger: #d92d20;     /* walang pasok */
+  --alert: #d92d20;      /* solid red card behind white text */
+  --danger-soft: #fdeceb;
+  --warn: #b54708;       /* partial / some levels */
+  --warn-soft: #fef3e2;
+  --info: #0e7490;       /* online only */
+  --info-soft: #e2f5f8;
+  --ok: #067647;         /* no suspension */
+  --ok-soft: #e3f6ec;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0b1020;
+    --surface: #131a2e;
+    --surface-2: #1b2440;
+    --text: #e8ecf6;
+    --muted: #9aa4bd;
+    --line: #26304d;
+    --brand: #7b93ff;
+    --brand-ink: #0b1020;
+    --brand-soft: #1e2a55;
+    --danger: #ff6b5f;
+    --alert: #b42318;
+    --danger-soft: #3a1714;
+    --warn: #f5a524;
+    --warn-soft: #3a2a0d;
+    --info: #4fd1e8;
+    --info-soft: #0f2f37;
+    --ok: #4ade80;
+    --ok-soft: #0f2e1f;
   }
 }
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-danger: var(--danger);
+  --color-alert: var(--alert);
+  --color-danger-soft: var(--danger-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  color-scheme: light dark;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Form controls follow the theme */
+select,
+input {
+  background: var(--surface);
+  color: var(--text);
 }

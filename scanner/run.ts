@@ -62,6 +62,13 @@ async function main() {
   }
 
   console.log(`Done. ${found} Pampanga announcement(s) found${DRY ? "" : `, ${saved} row(s) saved`}.`);
+
+  // Alert subscribers about anything new (including announcements saved by earlier runs that weren't sent yet).
+  if (client) {
+    const { sendNotifications } = await import("./notify.ts");
+    const result = await sendNotifications(client);
+    console.log(result.skipped ? `Notifications: ${result.skipped}` : `Notifications: ${result.sent} sent.`);
+  }
 }
 
 main().catch((e) => {
