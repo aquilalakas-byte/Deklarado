@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test scanner/",
+    "test": "node --test \"scanner/**/*.test.ts\"",
     "scan": "node scanner/run.ts",
     "scan:dry": "node scanner/run.ts --dry"
   },
