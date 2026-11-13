@@ -1,0 +1,203 @@
+[
+  {
+    "code": "000000000",
+    "name": "Philippines",
+    "type": "national",
+    "parent_code": null,
+    "aliases": [
+      "nationwide",
+      "Metro Manila and nationwide"
+    ]
+  },
+  {
+    "code": "030000000",
+    "name": "Region III",
+    "type": "region",
+    "parent_code": "000000000",
+    "aliases": [
+      "Central Luzon"
+    ]
+  },
+  {
+    "code": "035400000",
+    "name": "Pampanga",
+    "type": "province",
+    "parent_code": "030000000",
+    "aliases": [
+      "Pampanga province"
+    ]
+  },
+  {
+    "code": "035401000",
+    "name": "City of Angeles",
+    "type": "city",
+    "parent_code": "035400000",
+    "aliases": [
+      "Angeles",
+      "Angeles City"
+    ]
+  },
+  {
+    "code": "035402000",
+    "name": "Apalit",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035403000",
+    "name": "Arayat",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035404000",
+    "name": "Bacolor",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035405000",
+    "name": "Candaba",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035406000",
+    "name": "Floridablanca",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035407000",
+    "name": "Guagua",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035408000",
+    "name": "Lubao",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035409000",
+    "name": "Mabalacat City",
+    "type": "city",
+    "parent_code": "035400000",
+    "aliases": [
+      "Mabalacat"
+    ]
+  },
+  {
+    "code": "035410000",
+    "name": "Macabebe",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035411000",
+    "name": "Magalang",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035412000",
+    "name": "Masantol",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035413000",
+    "name": "Mexico",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035414000",
+    "name": "Minalin",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035415000",
+    "name": "Porac",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035416000",
+    "name": "City of San Fernando",
+    "type": "city",
+    "parent_code": "035400000",
+    "aliases": [
+      "San Fernando, Pampanga",
+      "CSFP",
+      "City of San Fernando, Pampanga"
+    ]
+  },
+  {
+    "code": "035417000",
+    "name": "San Luis",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035418000",
+    "name": "San Simon",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": []
+  },
+  {
+    "code": "035419000",
+    "name": "Santa Ana",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": [
+      "Sta. Ana, Pampanga"
+    ]
+  },
+  {
+    "code": "035420000",
+    "name": "Santa Rita",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": [
+      "Sta. Rita, Pampanga"
+    ]
+  },
+  {
+    "code": "035421000",
+    "name": "Sto. Tomas",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": [
+      "Santo Tomas, Pampanga",
+      "Sto. Tomas, Pampanga"
+    ]
+  },
+  {
+    "code": "035422000",
+    "name": "Sasmuan",
+    "type": "municipality",
+    "parent_code": "035400000",
+    "aliases": [
+      "Sasmuan",
+      "Sexmoan"
+    ]
+  }
+]
