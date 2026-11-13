@@ -11,11 +11,13 @@ export type Prefs = {
   levels: Level[];         // [] = all levels
   lang: "en" | "fil";      // app language
   sample: boolean;         // show sample announcements (for demos) instead of real data
+  remindHolidays: boolean; // night-before reminder for holidays
+  remindEvents: boolean;   // night-before reminder for my school-calendar events
 };
 
 const KEY = "deklarado:prefs";
 const EVENT = "deklarado:prefs-changed";
-const DEFAULT: Prefs = { areaCode: null, levels: [], lang: "en", sample: false };
+const DEFAULT: Prefs = { areaCode: null, levels: [], lang: "en", sample: false, remindHolidays: true, remindEvents: true };
 
 function read(): string | null {
   try {

@@ -44,17 +44,23 @@ export async function POST(req: NextRequest) {
   }
   const cleanLevels = Array.isArray(levels) ? levels.filter((l): l is string => typeof l === "string" && LEVEL_IDS.has(l)) : [];
 
-  const { error } = await db.from("push_subscriptions").upsert(
-    {
-      endpoint: sub.endpoint,
-      p256dh: sub.keys.p256dh.slice(0, 200),
-      auth: sub.keys.auth.slice(0, 100),
-      area_code: area.code,
-      levels: cleanLevels.length ? cleanLevels : ["all"],
-      lang: body?.lang === "fil" ? "fil" : "en",
-    },
-    { onConflict: "endpoint" },
-  );
+  const row = {
+    endpoint: sub.endpoint,
+    p256dh: sub.keys.p256dh.slice(0, 200),
+    auth: sub.keys.auth.slice(0, 100),
+    area_code: area.code,
+    levels: cleanLevels.length ? cleanLevels : ["all"],
+    lang: body?.lang === "fil" ? "fil" : "en",
+    remind_holidays: body?.remindHolidays !== false,
+    remind_events: body?.remindEvents !== false,
+  };
+  let { error } = await db.from("push_subscriptions").upsert(row, { onConflict: "endpoint" });
+  if (error && /remind_|column/i.test(error.message)) {
+    // Migration 0004 not run yet — save without the reminder choices so notifications still work.
+    const { remind_holidays: _h, remind_events: _e, ...basic } = row;
+    void _h; void _e;
+    ({ error } = await db.from("push_subscriptions").upsert(basic, { onConflict: "endpoint" }));
+  }
   if (error) return NextResponse.json({ error: error.message }, { status: 502 });
   return NextResponse.json({ ok: true });
 }

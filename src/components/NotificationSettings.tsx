@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { currentSubscription, disablePush, enablePush, pushSupport, syncPush, testNotification } from "@/lib/push";
+import { syncEventsToServer } from "@/lib/calendar";
 import { useT } from "@/lib/i18n";
+import { usePrefs } from "@/lib/prefs";
 import type { Level } from "@/lib/types";
 import { BellIcon } from "./Icons";
 
@@ -10,6 +12,8 @@ type Status = "checking" | "unsupported" | "ios-install" | "no-key" | "denied" |
 
 export function NotificationSettings({ areaCode, levels }: { areaCode: string | null; levels: Level[] }) {
   const { t, lang } = useT();
+  const { prefs, update } = usePrefs();
+  const opts = { lang, remindHolidays: prefs.remindHolidays, remindEvents: prefs.remindEvents };
   const [status, setStatus] = useState<Status>("checking");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; tone: "ok" | "error" } | null>(null);
@@ -30,8 +34,9 @@ export function NotificationSettings({ areaCode, levels }: { areaCode: string | 
     };
   }, []);
 
-  // When area or levels change while notifications are on, update the server.
+  // When area, levels, language or reminder choices change while notifications are on, update the server.
   const levelsKey = levels.join(",");
+  const { remindHolidays, remindEvents } = prefs;
   const firstRun = useRef(true);
   useEffect(() => {
     if (firstRun.current) {
@@ -39,9 +44,9 @@ export function NotificationSettings({ areaCode, levels }: { areaCode: string | 
       return;
     }
     if (status === "on" && areaCode) {
-      syncPush(areaCode, levelsKey ? (levelsKey.split(",") as Level[]) : [], lang).catch(() => {});
+      syncPush(areaCode, levelsKey ? (levelsKey.split(",") as Level[]) : [], { lang, remindHolidays, remindEvents }).catch(() => {});
     }
-  }, [areaCode, levelsKey, status, lang]);
+  }, [areaCode, levelsKey, status, lang, remindHolidays, remindEvents]);
 
   async function turnOn() {
     if (!areaCode) {
@@ -51,7 +56,8 @@ export function NotificationSettings({ areaCode, levels }: { areaCode: string | 
     setBusy(true);
     setMessage(null);
     try {
-      await enablePush(areaCode, levels, lang);
+      await enablePush(areaCode, levels, opts);
+      await syncEventsToServer(); // so reminders for already-saved school events work
       setStatus("on");
       setMessage({ text: t("notif.enabled"), tone: "ok" });
     } catch (e) {
@@ -125,6 +131,26 @@ export function NotificationSettings({ areaCode, levels }: { areaCode: string | 
           </div>
         )}
         {status === "off" && <button type="button" className={secondary} onClick={test}>{t("notif.test")}</button>}
+        {(status === "on" || status === "off") && (
+          <div className="space-y-2 border-t border-line pt-3">
+            <p className="text-xs font-medium text-muted">{t("remind.title")}</p>
+            {([
+              ["remindHolidays", "remind.holidays"],
+              ["remindEvents", "remind.events"],
+            ] as const).map(([key, label]) => (
+              <label key={key} className="flex cursor-pointer items-center justify-between gap-3 text-sm">
+                <span>{t(label)}</span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={prefs[key]}
+                  onChange={(e) => update({ [key]: e.target.checked })}
+                  className="size-5 shrink-0 accent-[var(--brand)]"
+                />
+              </label>
+            ))}
+          </div>
+        )}
         {message && (
           <p role="status" className={`rounded-lg px-3 py-2 text-sm ${message.tone === "ok" ? "bg-ok-soft text-ok" : "bg-danger-soft text-danger"}`}>
             {message.text}

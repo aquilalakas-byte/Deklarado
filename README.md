@@ -25,8 +25,9 @@ notifications. The full plan is in [docs/PLAN.md](docs/PLAN.md).
    1. `supabase/migrations/0001_init.sql`
    2. `supabase/migrations/0002_wind_signals.sql`
    3. `supabase/migrations/0003_reports_and_language.sql`
-   4. `supabase/seed/0001_areas.sql`
-   5. `supabase/seed/0002_sources.sql`
+   4. `supabase/migrations/0004_calendar_reminders.sql`
+   5. `supabase/seed/0001_areas.sql`
+   6. `supabase/seed/0002_sources.sql`
 4. Copy `.env.example` to `.env.local` and fill in the keys from **Project Settings → API**.
 5. Run `npm run dev` and open http://localhost:3000.
 
@@ -83,6 +84,9 @@ nationwide one to everyone — only if the school levels match. Each announcemen
 | **English / Filipino** | All text is in `src/lib/i18n.ts` (add every new key to both `en` and `fil`). Switch in Settings or on the welcome screen. Notifications are sent in the user's language. |
 | **Share** | Each announcement card → Share (phone share sheet, or copies the text). `src/components/ShareButton.tsx` |
 | **Report a mistake** | Each card → Report a mistake. Saved in the `reports` table (no personal data). Review them in Supabase → Table Editor → `reports` and set `status` to `confirmed` or `dismissed`. |
+| **Philippine holidays** | `src/data/holidays.json` (2026: Proclamation No. 1006; 2027: Proclamation No. 1427). Shown on Today and the Calendar; night-before reminder at ~6 PM. **Add next year's dates every September** when the new Proclamation comes out; Eid dates are announced separately. |
+| **School calendar from a photo** | Calendar → "Add school calendar from photo". Text is read on the phone (`tesseract.js`, no upload), turned into events by `src/lib/parseCalendar.ts`, and reviewed by the user before saving. Events are personal: saved on the phone, plus a private copy (`personal_events`, tied only to the phone's notification subscription) for night-before reminders. |
+| **Night-before reminders** | `scanner/reminders.ts`, sent on the ~6 PM scan. Users can turn holiday / school-event reminders off in Settings. Test now with `node scanner/run.ts --reminders`. |
 | **Works offline** | `public/sw.js` saves the pages and the latest announcements. With no signal, the app shows the saved copy with an "offline" notice. Test it with a production build (`npm run build` then `npm start`) — offline mode is not reliable in `npm run dev`. |
 
 ## Push notifications

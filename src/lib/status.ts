@@ -3,7 +3,7 @@ import { LEVELS } from "./types";
 import { timeLabel } from "./dates";
 import { levelName, type T } from "./i18n";
 
-export type DayState = "none" | "suspended" | "partial" | "online" | "holiday";
+export type DayState = "none" | "suspended" | "partial" | "online" | "holiday" | "school";
 
 export type DayStatus = {
   state: DayState;
@@ -11,6 +11,26 @@ export type DayStatus = {
   detail: string;       // one line under it
   matches: Announcement[];
 };
+
+type HolidayLike = { name: string; nameFil: string; type: string };
+type EventLike = { title: string; kind: string };
+
+/**
+ * Adds holidays and the user's own school-calendar events to a day's status.
+ * Order: a real suspension wins → then a holiday → then "no classes" from your school calendar.
+ */
+export function withCalendar(s: DayStatus, holiday: HolidayLike | undefined, events: EventLike[], t: T, lang: "en" | "fil"): DayStatus {
+  const strong = s.state === "suspended" || s.state === "holiday";
+  if (!strong && holiday && holiday.type !== "special_working") {
+    const name = lang === "fil" ? holiday.nameFil : holiday.name;
+    return { ...s, state: "holiday", headline: t("holiday.headline"), detail: t(holiday.type === "regular" ? "holiday.regular" : "holiday.special", { name }) };
+  }
+  const noClass = events.find((e) => e.kind === "no_class");
+  if (s.state === "none" && noClass) {
+    return { ...s, state: "school", headline: t("school.noClass"), detail: t("school.fromCalendar", { title: noClass.title }) };
+  }
+  return s;
+}
 
 /** Does this announcement affect someone who cares about `levels` ([] = everyone)? */
 export function appliesToLevels(a: Announcement, levels: Level[]): boolean {

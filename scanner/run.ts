@@ -5,6 +5,7 @@
 //   node scanner/run.ts --dry --debug   → also print every GMA list line for ANY place (to check the classifier)
 //   node scanner/run.ts --dry --days 14 → look further back (default: 3 days)
 //   node scanner/run.ts --only gma|pagasa|rss → run just one stage
+//   node scanner/run.ts --reminders → send night-before reminders now (normally only on the ~6 PM run)
 //
 // Each source is a separate stage: if one website is down, the others still run.
 
@@ -127,6 +128,15 @@ async function main() {
     const { sendNotifications } = await import("./notify.ts");
     const result = await sendNotifications(client);
     console.log(result.skipped ? `Notifications: ${result.skipped}` : `Notifications: ${result.sent} sent.`);
+
+    // Night-before reminders for holidays and school-calendar events (only on the ~6 PM run)
+    try {
+      const { sendReminders } = await import("./reminders.ts");
+      console.log(`Reminders: ${await sendReminders(client, { force: args.includes("--reminders") })}`);
+    } catch (e) {
+      console.error(`  ✖ reminders failed: ${(e as Error).message}`);
+      failed.push("reminders");
+    }
   }
 
   if (failed.length) {

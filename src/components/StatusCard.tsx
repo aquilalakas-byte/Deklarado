@@ -6,6 +6,7 @@ const STYLE: Record<DayStatus["state"], { card: string; dot: string; label: stri
   holiday: { card: "border-transparent bg-alert text-white", dot: "bg-white", label: "text-white/85" },
   partial: { card: "border-warn/30 bg-warn-soft", dot: "bg-warn", label: "text-warn" },
   online: { card: "border-info/30 bg-info-soft", dot: "bg-info", label: "text-info" },
+  school: { card: "border-brand/30 bg-brand-soft", dot: "bg-brand", label: "text-brand" },
 };
 
 export function StatusCard({ label, date, status, big = false }: { label: string; date: string; status: DayStatus; big?: boolean }) {

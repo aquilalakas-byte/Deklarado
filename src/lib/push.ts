@@ -39,11 +39,14 @@ function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-async function save(sub: PushSubscription, areaCode: string, levels: Level[], lang: string) {
+/** Language and reminder choices saved with the subscription. */
+export type PushOptions = { lang: string; remindHolidays: boolean; remindEvents: boolean };
+
+async function save(sub: PushSubscription, areaCode: string, levels: Level[], opts: PushOptions) {
   const res = await fetch("/api/push", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ subscription: sub.toJSON(), areaCode, levels, lang }),
+    body: JSON.stringify({ subscription: sub.toJSON(), areaCode, levels, ...opts }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -53,7 +56,7 @@ async function save(sub: PushSubscription, areaCode: string, levels: Level[], la
 }
 
 /** Ask permission, subscribe this browser, and save it. Throws a readable Error on failure. */
-export async function enablePush(areaCode: string, levels: Level[], lang: string): Promise<void> {
+export async function enablePush(areaCode: string, levels: Level[], opts: PushOptions): Promise<void> {
   const permission = await Notification.requestPermission();
   if (permission !== "granted") throw new Error("Notifications are blocked. Allow them in your browser settings for this site.");
   const reg = await registration();
@@ -61,7 +64,7 @@ export async function enablePush(areaCode: string, levels: Level[], lang: string
   const sub = (await reg.pushManager.getSubscription()) ??
     (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(PUBLIC_KEY) }));
   try {
-    await save(sub, areaCode, levels, lang);
+    await save(sub, areaCode, levels, opts);
   } catch (e) {
     await sub.unsubscribe().catch(() => {}); // keep browser and server in sync
     throw e;
@@ -80,9 +83,9 @@ export async function disablePush(): Promise<void> {
 }
 
 /** After the user changes area or levels, update the server copy. */
-export async function syncPush(areaCode: string, levels: Level[], lang: string): Promise<void> {
+export async function syncPush(areaCode: string, levels: Level[], opts: PushOptions): Promise<void> {
   const sub = await currentSubscription();
-  if (sub) await save(sub, areaCode, levels, lang);
+  if (sub) await save(sub, areaCode, levels, opts);
 }
 
 /** Shows a sample notification right away (no server needed) so users can check it works. */

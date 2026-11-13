@@ -13,7 +13,8 @@ import { affectingCodes, displayName, getArea } from "@/lib/areas";
 import { addDays, manilaToday, shortDate } from "@/lib/dates";
 import { levelName, useT } from "@/lib/i18n";
 import { usePrefs } from "@/lib/prefs";
-import { dayStatus } from "@/lib/status";
+import { eventsOn, holidayOn, usePersonalEvents } from "@/lib/calendar";
+import { dayStatus, withCalendar } from "@/lib/status";
 import { LEVELS } from "@/lib/types";
 import { useAnnouncements } from "@/lib/useAnnouncements";
 
@@ -54,8 +55,14 @@ function Today({ areaCode }: { areaCode: string }) {
   const area = getArea(areaCode)!;
 
   const all = data?.announcements ?? [];
-  const todayStatus = dayStatus(all, today, prefs.levels, t);
-  const tomorrowStatus = dayStatus(all, tomorrow, prefs.levels, t);
+  const { events } = usePersonalEvents();
+  const todayStatus = withCalendar(dayStatus(all, today, prefs.levels, t), holidayOn(today), eventsOn(events, today), t, lang);
+  const tomorrowStatus = withCalendar(dayStatus(all, tomorrow, prefs.levels, t), holidayOn(tomorrow), eventsOn(events, tomorrow), t, lang);
+  // Exams and other events from my school calendar (shown as small notes under the cards)
+  const notes = [
+    ...eventsOn(events, today).filter((e) => e.kind !== "no_class").map((e) => ({ when: t("today.today"), e })),
+    ...eventsOn(events, tomorrow).filter((e) => e.kind !== "no_class").map((e) => ({ when: t("today.tomorrow"), e })),
+  ];
   const later = all.filter((a) => a.date_covered > tomorrow);
   const levelNote = prefs.levels.length === 0
     ? t("today.allLevels")
@@ -81,6 +88,18 @@ function Today({ areaCode }: { areaCode: string }) {
           <StatusCard label={t("today.today")} date={shortDate(today, lang)} status={todayStatus} big />
           <StatusCard label={t("today.tomorrow")} date={shortDate(tomorrow, lang)} status={tomorrowStatus} />
         </>
+      )}
+
+      {notes.length > 0 && (
+        <ul className="space-y-1.5">
+          {notes.map(({ when, e }) => (
+            <li key={when + e.id} className="flex items-center gap-2 rounded-xl border border-brand/20 bg-brand-soft px-3 py-2 text-sm">
+              <span className="size-2 shrink-0 rounded-full border border-brand" />
+              <span className="font-medium">{when}:</span>
+              <span className="truncate">{e.title}</span>
+            </li>
+          ))}
+        </ul>
       )}
 
       <InstallBanner />
