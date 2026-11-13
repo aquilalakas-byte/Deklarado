@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
 import { AreaPicker } from "@/components/AreaPicker";
 import { Logo } from "@/components/Header";
+import { InstallBanner } from "@/components/InstallApp";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { DemoBanner, Disclaimer, ErrorBox, LastChecked, OfflineBanner } from "@/components/Notices";
 import { SignalBanner } from "@/components/SignalBanner";
@@ -34,6 +35,7 @@ function Welcome({ onPick }: { onPick: (code: string) => void }) {
         <p className="mt-2 text-muted">{t("welcome.body")}</p>
       </div>
       <LanguageSwitch />
+      <InstallBanner />
       <section className="rounded-2xl border border-line bg-surface p-4">
         <h2 className="mb-3 font-semibold">{t("welcome.where")}</h2>
         <AreaPicker value={null} onChange={onPick} />
@@ -80,6 +82,8 @@ function Today({ areaCode }: { areaCode: string }) {
           <StatusCard label={t("today.tomorrow")} date={shortDate(tomorrow, lang)} status={tomorrowStatus} />
         </>
       )}
+
+      <InstallBanner />
 
       {!loading && (todayStatus.matches.length > 0 || tomorrowStatus.matches.length > 0) && (
         <section className="space-y-3">

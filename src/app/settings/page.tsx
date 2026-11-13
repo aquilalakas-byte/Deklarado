@@ -2,6 +2,7 @@
 
 import { AreaPicker } from "@/components/AreaPicker";
 import { ClientOnly } from "@/components/ClientOnly";
+import { InstallCard } from "@/components/InstallApp";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { Disclaimer, Loading } from "@/components/Notices";
@@ -82,6 +83,8 @@ function Settings() {
           })}
         </div>
       </section>
+
+      <InstallCard />
 
       <NotificationSettings areaCode={prefs.areaCode} levels={prefs.levels} />
 
