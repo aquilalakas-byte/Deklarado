@@ -9,11 +9,13 @@ import type { Level } from "./types";
 export type Prefs = {
   areaCode: string | null; // the user's city/town
   levels: Level[];         // [] = all levels
+  lang: "en" | "fil";      // app language
+  sample: boolean;         // show sample announcements (for demos) instead of real data
 };
 
 const KEY = "deklarado:prefs";
 const EVENT = "deklarado:prefs-changed";
-const DEFAULT: Prefs = { areaCode: null, levels: [] };
+const DEFAULT: Prefs = { areaCode: null, levels: [], lang: "en", sample: false };
 
 function read(): string | null {
   try {

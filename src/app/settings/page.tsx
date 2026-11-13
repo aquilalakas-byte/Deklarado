@@ -2,18 +2,28 @@
 
 import { AreaPicker } from "@/components/AreaPicker";
 import { ClientOnly } from "@/components/ClientOnly";
+import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { NotificationSettings } from "@/components/NotificationSettings";
-import { Disclaimer } from "@/components/Notices";
+import { Disclaimer, Loading } from "@/components/Notices";
 import { getArea, placeLabel } from "@/lib/areas";
+import { levelName, useT, type TKey } from "@/lib/i18n";
 import { usePrefs } from "@/lib/prefs";
 import { LEVELS, type Level } from "@/lib/types";
 
 export default function SettingsPage() {
-  return <ClientOnly fallback={<p className="py-6 text-center text-sm text-muted">Loading…</p>}><Settings /></ClientOnly>;
+  return <ClientOnly fallback={<Loading />}><Settings /></ClientOnly>;
 }
+
+const SOURCES: [TKey, TKey][] = [
+  ["settings.sources.gma", "settings.sources.gma.body"],
+  ["settings.sources.lgu", "settings.sources.lgu.body"],
+  ["settings.sources.deped", "settings.sources.deped.body"],
+  ["settings.sources.pagasa", "settings.sources.pagasa.body"],
+];
 
 function Settings() {
   const { prefs, update } = usePrefs();
+  const { t } = useT();
   const area = getArea(prefs.areaCode);
   const allLevels = prefs.levels.length === 0;
 
@@ -24,22 +34,29 @@ function Settings() {
   }
 
   const card = "rounded-2xl border border-line bg-surface p-4";
+  // Put the place name in bold inside the translated sentence
+  const [before, after] = t("settings.area.showing", { place: "\u0000" }).split("\u0000");
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold tracking-tight">Settings</h1>
+      <h1 className="text-xl font-bold tracking-tight">{t("settings.title")}</h1>
 
       <section className={card}>
-        <h2 className="font-semibold">Your area</h2>
+        <h2 className="mb-3 font-semibold">{t("settings.language")}</h2>
+        <LanguageSwitch />
+      </section>
+
+      <section className={card}>
+        <h2 className="font-semibold">{t("settings.area")}</h2>
         <p className="mb-3 mt-1 text-sm text-muted">
-          {area ? <>Showing announcements for <strong className="text-text">{placeLabel(area.code)}</strong>, plus province-wide and nationwide ones.</> : "Choose where you live or study."}
+          {area ? <>{before}<strong className="text-text">{placeLabel(area.code, t)}</strong>{after}</> : t("settings.area.choose")}
         </p>
         <AreaPicker value={prefs.areaCode} onChange={(code) => update({ areaCode: code })} />
       </section>
 
       <section className={card}>
-        <h2 className="font-semibold">School levels you follow</h2>
-        <p className="mb-3 mt-1 text-sm text-muted">The Today screen and notifications only count suspensions for these levels.</p>
+        <h2 className="font-semibold">{t("settings.levels")}</h2>
+        <p className="mb-3 mt-1 text-sm text-muted">{t("settings.levels.body")}</p>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -47,7 +64,7 @@ function Settings() {
             aria-pressed={allLevels}
             className={`rounded-full border px-3 py-1.5 text-sm font-medium ${allLevels ? "border-brand bg-brand text-brand-ink" : "border-line text-muted hover:text-text"}`}
           >
-            All levels
+            {t("levels.all")}
           </button>
           {LEVELS.map((l) => {
             const on = prefs.levels.includes(l.id);
@@ -59,7 +76,7 @@ function Settings() {
                 aria-pressed={on}
                 className={`rounded-full border px-3 py-1.5 text-sm font-medium ${on ? "border-brand bg-brand-soft text-brand" : "border-line text-muted hover:text-text"}`}
               >
-                {l.label}
+                {levelName(t, l.id)}
               </button>
             );
           })}
@@ -69,13 +86,28 @@ function Settings() {
       <NotificationSettings areaCode={prefs.areaCode} levels={prefs.levels} />
 
       <section className={card}>
-        <h2 className="font-semibold">About the sources</h2>
-        <p className="mt-1 text-sm text-muted">All sources are checked automatically every 3 hours.</p>
+        <label className="flex cursor-pointer items-start justify-between gap-4">
+          <span>
+            <span className="block font-semibold">{t("sample.title")}</span>
+            <span className="mt-1 block text-sm text-muted">{t("sample.body")}</span>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={prefs.sample}
+            onChange={(e) => update({ sample: e.target.checked })}
+            className="mt-1 size-5 shrink-0 accent-[var(--brand)]"
+          />
+        </label>
+      </section>
+
+      <section className={card}>
+        <h2 className="font-semibold">{t("settings.sources")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.sources.every")}</p>
         <ul className="mt-2 space-y-2 text-sm text-muted">
-          <li><strong className="text-text">GMA News – Walang Pasok:</strong> nationwide suspension lists, usually with links to each LGU&apos;s own post.</li>
-          <li><strong className="text-text">LGU websites:</strong> official posts from San Fernando, Angeles, Guagua and Lubao.</li>
-          <li><strong className="text-text">DepEd:</strong> nationwide suspensions only.</li>
-          <li><strong className="text-text">PAGASA:</strong> Wind Signals for your town, shown as a weather alert. Under Executive Order 130 (2026), automatic suspensions will follow DepEd&apos;s new thresholds once published.</li>
+          {SOURCES.map(([name, body]) => (
+            <li key={name}><strong className="text-text">{t(name)}</strong> {t(body)}</li>
+          ))}
         </ul>
       </section>
 

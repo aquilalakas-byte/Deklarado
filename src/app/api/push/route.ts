@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
       auth: sub.keys.auth.slice(0, 100),
       area_code: area.code,
       levels: cleanLevels.length ? cleanLevels : ["all"],
+      lang: body?.lang === "fil" ? "fil" : "en",
     },
     { onConflict: "endpoint" },
   );

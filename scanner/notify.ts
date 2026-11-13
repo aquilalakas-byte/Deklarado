@@ -25,17 +25,46 @@ export type AnnouncementRow = {
   reason: string | null;
 };
 
-export type SubscriptionRow = { id: number; endpoint: string; p256dh: string; auth: string; area_code: string; levels: string[] };
+export type Lang = "en" | "fil";
+export type SubscriptionRow = { id: number; endpoint: string; p256dh: string; auth: string; area_code: string; levels: string[]; lang?: string | null };
 
-const LEVEL_SHORT: Record<string, string> = { kinder: "Kinder", elementary: "Elem", jhs: "JHS", shs: "SHS", college: "College" };
+// Notification wording in English and Filipino. Users get alerts in the language they picked in the app.
+const TEXT = {
+  en: {
+    levels: { kinder: "Kinder", elementary: "Elem", jhs: "JHS", shs: "SHS", college: "College" } as Record<string, string>,
+    allLevels: "All levels",
+    sector: { both: "public & private", public: "public schools", private: "private schools" },
+    nationwide: "Nationwide",
+    wholeProvince: (p: string) => `${p} (whole province)`,
+    today: "Today", tomorrow: "Tomorrow", locale: "en-PH",
+    resume: "Classes resume", walangPasok: "Walang pasok", work: "Government work suspended",
+    noF2f: "No face-to-face classes", from: (t: string) => `Walang pasok from ${t}`,
+    some: (l: string) => `Classes suspended (${l})`, holiday: "Non-working day",
+    signal: (n: number) => `Wind Signal No. ${n} raised`, storm: "Tropical cyclone",
+    issued: (i: string) => `PAGASA, issued ${i}`, watch: "Watch for class suspension announcements.",
+  },
+  fil: {
+    levels: { kinder: "Kinder", elementary: "Elem", jhs: "JHS", shs: "SHS", college: "Kolehiyo" } as Record<string, string>,
+    allLevels: "Lahat ng antas",
+    sector: { both: "pampubliko at pribado", public: "pampublikong paaralan", private: "pribadong paaralan" },
+    nationwide: "Buong bansa",
+    wholeProvince: (p: string) => `${p} (buong probinsya)`,
+    today: "Ngayon", tomorrow: "Bukas", locale: "fil-PH",
+    resume: "Tuloy ang klase", walangPasok: "Walang pasok", work: "Walang pasok sa gobyerno",
+    noF2f: "Walang face-to-face na klase", from: (t: string) => `Walang pasok simula ${t}`,
+    some: (l: string) => `Suspendido ang klase (${l})`, holiday: "Non-working day",
+    signal: (n: number) => `Nakataas ang Wind Signal No. ${n}`, storm: "Bagyo",
+    issued: (i: string) => `PAGASA, inilabas ${i}`, watch: "Abangan ang anunsyo ng suspensyon ng klase.",
+  },
+};
+
+const langOf = (l?: string | null): Lang => (l === "fil" ? "fil" : "en");
 
 // ─── Pure helpers (tested in notify.test.ts) ─────────────────────────────────
 
 /** Every area code inside `code`, including itself. */
 export function insideCodes(code: string): Set<string> {
   const out = new Set([code]);
-  for (const a of AREAS) if (a.parent_code && out.has(a.parent_code)) out.add(a.code);
-  // areas.json is ordered parent-first, but loop again in case it isn't
   let grew = true;
   while (grew) {
     grew = false;
@@ -50,11 +79,12 @@ export function wantsIt(sub: Pick<SubscriptionRow, "area_code" | "levels">, a: P
   return a.levels.some((l) => sub.levels.includes(l));
 }
 
-function placeName(code: string): string {
+function placeName(code: string, lang: Lang): string {
   const a = BY_CODE.get(code);
-  if (!a) return "your area";
-  if (a.type === "national") return "Nationwide";
-  if (a.type === "province") return `${a.name} (whole province)`;
+  const tx = TEXT[lang];
+  if (!a) return "?";
+  if (a.type === "national") return tx.nationwide;
+  if (a.type === "province") return tx.wholeProvince(a.name);
   const m = a.name.match(/^City of (.+)$/);
   return m ? `${m[1]} City` : a.name;
 }
@@ -64,44 +94,48 @@ function timeText(hhmm: string): string {
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
 }
 
-function dayText(date: string, today: string): string {
+function dayText(date: string, today: string, lang: Lang): string {
+  const tx = TEXT[lang];
   const tomorrow = new Date(`${today}T00:00:00Z`);
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-  const label = new Date(`${date}T00:00:00Z`).toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
-  if (date === today) return `Today, ${label}`;
-  if (date === tomorrow.toISOString().slice(0, 10)) return `Tomorrow, ${label}`;
+  const label = new Date(`${date}T00:00:00Z`).toLocaleDateString(tx.locale, { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+  if (date === today) return `${tx.today}, ${label}`;
+  if (date === tomorrow.toISOString().slice(0, 10)) return `${tx.tomorrow}, ${label}`;
   return label;
 }
 
-export function buildMessage(a: AnnouncementRow, today: string) {
-  const place = placeName(a.area_code);
-  const levels = a.levels.includes("all") ? "All levels" : a.levels.map((l) => LEVEL_SHORT[l] ?? l).join(", ");
-  const sector = a.sector === "both" ? "public & private" : `${a.sector} schools`;
+export function buildMessage(a: AnnouncementRow, today: string, language?: string | null) {
+  const lang = langOf(language);
+  const tx = TEXT[lang];
+  const place = placeName(a.area_code, lang);
+  const levels = a.levels.includes("all") ? tx.allLevels : a.levels.map((l) => tx.levels[l] ?? l).join(", ");
 
-  let title: string;
-  if (a.kind === "resumption") title = `Classes resume — ${place}`;
-  else if (a.kind === "holiday") title = `Walang pasok — ${place}`;
-  else if (a.kind === "work_suspension") title = `Government work suspended — ${place}`;
-  else if (a.f2f_only) title = `No face-to-face classes — ${place}`;
-  else if (a.starts_at) title = `Walang pasok from ${timeText(a.starts_at)} — ${place}`;
-  else if (!a.levels.includes("all")) title = `Classes suspended (${levels}) — ${place}`;
-  else title = `Walang pasok — ${place}`;
+  let head: string;
+  if (a.kind === "resumption") head = tx.resume;
+  else if (a.kind === "holiday") head = tx.walangPasok;
+  else if (a.kind === "work_suspension") head = tx.work;
+  else if (a.f2f_only) head = tx.noF2f;
+  else if (a.starts_at) head = tx.from(timeText(a.starts_at));
+  else if (!a.levels.includes("all")) head = tx.some(levels);
+  else head = tx.walangPasok;
 
-  const parts = [dayText(a.date_covered, today)];
-  if (a.kind === "holiday") parts.push("Non-working day");
-  else if (a.kind !== "work_suspension") parts.push(`${levels}, ${sector}`);
+  const parts = [dayText(a.date_covered, today, lang)];
+  if (a.kind === "holiday") parts.push(tx.holiday);
+  else if (a.kind !== "work_suspension") parts.push(`${levels}, ${tx.sector[a.sector]}`);
   if (a.reason) parts.push(a.reason.charAt(0).toUpperCase() + a.reason.slice(1));
 
-  return { title, body: parts.join(" · "), url: "/", tag: `${a.area_code}-${a.date_covered}` };
+  return { title: `${head} — ${place}`, body: parts.join(" · "), url: "/", tag: `${a.area_code}-${a.date_covered}` };
 }
 
 export type SignalRow = { area_code: string; level: number; storm: string | null; bulletin_no: string | null; issued: string | null; notified_level: number };
 
 /** "Wind Signal No. 2 raised — San Fernando City" (a weather alert, not a suspension). */
-export function buildSignalMessage(s: SignalRow) {
-  const parts = [s.storm ?? "Tropical cyclone", s.issued ? `PAGASA, issued ${s.issued}` : "PAGASA", "Watch for class suspension announcements."];
+export function buildSignalMessage(s: SignalRow, language?: string | null) {
+  const lang = langOf(language);
+  const tx = TEXT[lang];
+  const parts = [s.storm ?? tx.storm, s.issued ? tx.issued(s.issued) : "PAGASA", tx.watch];
   return {
-    title: `Wind Signal No. ${s.level} raised — ${placeName(s.area_code)}`,
+    title: `${tx.signal(s.level)} — ${placeName(s.area_code, lang)}`,
     body: parts.join(" · "),
     url: "/",
     tag: `signal-${s.area_code}`,
@@ -143,8 +177,15 @@ export async function sendNotifications(db: SupabaseClient): Promise<{ sent: num
 
   if (!fresh.length && !signals.length) return { sent: 0, skipped: null };
 
-  const { data: subs, error: subErr } = await db.from("push_subscriptions").select("id, endpoint, p256dh, auth, area_code, levels").limit(5000);
-  if (subErr) throw new Error(`Loading subscriptions: ${subErr.message}`);
+  let subs: SubscriptionRow[] | null = null;
+  const withLang = await db.from("push_subscriptions").select("id, endpoint, p256dh, auth, area_code, levels, lang").limit(5000);
+  if (!withLang.error) subs = withLang.data as SubscriptionRow[];
+  else {
+    // Migration 0003 (adds "lang") may not be run yet — fall back to English for everyone.
+    const plain = await db.from("push_subscriptions").select("id, endpoint, p256dh, auth, area_code, levels").limit(5000);
+    if (plain.error) throw new Error(`Loading subscriptions: ${plain.error.message}`);
+    subs = plain.data as SubscriptionRow[];
+  }
 
   let sent = 0;
   const gone = new Set<number>();
@@ -160,14 +201,16 @@ export async function sendNotifications(db: SupabaseClient): Promise<{ sent: num
   }
 
   for (const a of fresh) {
-    const payload = JSON.stringify(buildMessage(a, today));
-    for (const s of (subs ?? []) as SubscriptionRow[]) if (!gone.has(s.id) && wantsIt(s, a)) await push(s, payload);
+    for (const s of (subs ?? []) as SubscriptionRow[]) {
+      if (!gone.has(s.id) && wantsIt(s, a)) await push(s, JSON.stringify(buildMessage(a, today, s.lang)));
+    }
     await db.from("announcements").update({ notified_at: new Date().toISOString() }).eq("id", a.id);
   }
 
   for (const sig of signals) {
-    const payload = JSON.stringify(buildSignalMessage(sig));
-    for (const s of (subs ?? []) as SubscriptionRow[]) if (!gone.has(s.id) && s.area_code === sig.area_code) await push(s, payload);
+    for (const s of (subs ?? []) as SubscriptionRow[]) {
+      if (!gone.has(s.id) && s.area_code === sig.area_code) await push(s, JSON.stringify(buildSignalMessage(sig, s.lang)));
+    }
     await db.from("wind_signals").update({ notified_level: sig.level }).eq("area_code", sig.area_code);
   }
 

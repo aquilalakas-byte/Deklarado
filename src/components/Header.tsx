@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { getArea, displayName } from "@/lib/areas";
+import { useT } from "@/lib/i18n";
 import { usePrefs } from "@/lib/prefs";
 import { PinIcon } from "./Icons";
 
@@ -17,7 +19,13 @@ export function Logo({ size = 28 }: { size?: number }) {
 
 export function Header() {
   const { prefs, ready } = usePrefs();
+  const { t, lang } = useT();
   const area = getArea(prefs.areaCode);
+
+  // Keep <html lang> in sync for screen readers and translation tools.
+  useEffect(() => {
+    document.documentElement.lang = lang === "fil" ? "fil" : "en";
+  }, [lang]);
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur">
       <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3">
@@ -31,7 +39,7 @@ export function Header() {
             className="flex min-w-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm text-muted hover:text-text"
           >
             <PinIcon width={15} height={15} className="shrink-0" />
-            <span className="truncate">{area ? displayName(area) : "Set your area"}</span>
+            <span className="truncate">{area ? displayName(area) : t("header.setArea")}</span>
           </Link>
         )}
       </div>

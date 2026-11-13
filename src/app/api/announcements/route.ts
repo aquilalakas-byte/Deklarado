@@ -19,7 +19,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invalid date range" }, { status: 400 });
   }
 
-  const db = supabaseReader();
+  // ?sample=1 → sample announcements even when the database is connected (Settings → Show sample data)
+  const db = p.get("sample") === "1" ? null : supabaseReader();
   if (!db) {
     const announcements = demoAnnouncements(today).filter(
       (a) => (areas.length === 0 || areas.includes(a.area_code)) && a.date_covered >= from && a.date_covered <= to,

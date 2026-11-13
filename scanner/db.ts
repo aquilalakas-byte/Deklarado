@@ -75,5 +75,6 @@ export async function saveAnnouncements(
 }
 
 export async function markChecked(db: SupabaseClient, sourceId: number, error: string | null) {
-  await db.from("sources").update({ last_checked_at: new Date().toISOString(), last_error: error }).eq("id", sourceId);
+  const res = await db.from("sources").update({ last_checked_at: new Date().toISOString(), last_error: error }).eq("id", sourceId);
+  if (res.error) console.warn(`  ! could not save "last checked" for source ${sourceId}: ${res.error.message}`);
 }

@@ -39,20 +39,21 @@ function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-async function save(sub: PushSubscription, areaCode: string, levels: Level[]) {
+async function save(sub: PushSubscription, areaCode: string, levels: Level[], lang: string) {
   const res = await fetch("/api/push", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ subscription: sub.toJSON(), areaCode, levels }),
+    body: JSON.stringify({ subscription: sub.toJSON(), areaCode, levels, lang }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `Server error (${res.status})`);
+    // .status lets the screen show a translated message (503 = database not connected yet)
+    throw Object.assign(new Error(body.error ?? `Server error (${res.status})`), { status: res.status });
   }
 }
 
 /** Ask permission, subscribe this browser, and save it. Throws a readable Error on failure. */
-export async function enablePush(areaCode: string, levels: Level[]): Promise<void> {
+export async function enablePush(areaCode: string, levels: Level[], lang: string): Promise<void> {
   const permission = await Notification.requestPermission();
   if (permission !== "granted") throw new Error("Notifications are blocked. Allow them in your browser settings for this site.");
   const reg = await registration();
@@ -60,7 +61,7 @@ export async function enablePush(areaCode: string, levels: Level[]): Promise<voi
   const sub = (await reg.pushManager.getSubscription()) ??
     (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(PUBLIC_KEY) }));
   try {
-    await save(sub, areaCode, levels);
+    await save(sub, areaCode, levels, lang);
   } catch (e) {
     await sub.unsubscribe().catch(() => {}); // keep browser and server in sync
     throw e;
@@ -79,17 +80,17 @@ export async function disablePush(): Promise<void> {
 }
 
 /** After the user changes area or levels, update the server copy. */
-export async function syncPush(areaCode: string, levels: Level[]): Promise<void> {
+export async function syncPush(areaCode: string, levels: Level[], lang: string): Promise<void> {
   const sub = await currentSubscription();
-  if (sub) await save(sub, areaCode, levels);
+  if (sub) await save(sub, areaCode, levels, lang);
 }
 
 /** Shows a sample notification right away (no server needed) so users can check it works. */
-export async function testNotification(): Promise<void> {
+export async function testNotification(title: string, body: string): Promise<void> {
   const reg = await registration();
   await navigator.serviceWorker.ready;
-  await reg.showNotification("Walang pasok — sample alert", {
-    body: "This is how Deklarado will alert you when classes are suspended in your area.",
+  await reg.showNotification(title, {
+    body,
     icon: "/icons/icon-192.png",
     badge: "/icons/badge-96.png",
     tag: "deklarado-test",

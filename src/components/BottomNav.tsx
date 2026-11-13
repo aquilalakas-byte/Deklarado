@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useT, type TKey } from "@/lib/i18n";
 import { CalendarIcon, GearIcon, HomeIcon, ListIcon } from "./Icons";
 
-const TABS = [
-  { href: "/", label: "Today", Icon: HomeIcon },
-  { href: "/calendar", label: "Calendar", Icon: CalendarIcon },
-  { href: "/browse", label: "Browse", Icon: ListIcon },
-  { href: "/settings", label: "Settings", Icon: GearIcon },
+const TABS: { href: string; label: TKey; Icon: typeof HomeIcon }[] = [
+  { href: "/", label: "nav.today", Icon: HomeIcon },
+  { href: "/calendar", label: "nav.calendar", Icon: CalendarIcon },
+  { href: "/browse", label: "nav.browse", Icon: ListIcon },
+  { href: "/settings", label: "nav.settings", Icon: GearIcon },
 ];
 
 export function BottomNav() {
   const path = usePathname();
+  const { t } = useT();
   return (
     <nav
       aria-label="Main"
@@ -29,7 +31,7 @@ export function BottomNav() {
                 className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors ${active ? "text-brand" : "text-muted hover:text-text"}`}
               >
                 <Icon width={22} height={22} strokeWidth={active ? 2.4 : 2} />
-                {label}
+                {t(label)}
               </Link>
             </li>
           );

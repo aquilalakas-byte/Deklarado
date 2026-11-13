@@ -1,5 +1,6 @@
 import areasData from "@/data/areas.json";
 import coordinates from "@/data/coordinates.json";
+import type { T } from "./i18n";
 import type { Area } from "./types";
 
 export const AREAS = areasData as Area[];
@@ -47,11 +48,12 @@ export function displayName(a: Area): string {
   return m ? `${m[1]} City` : a.name;
 }
 
-export function placeLabel(code: string): string {
+/** Pass the translator to get "Buong bansa" / "Pampanga (buong probinsya)" in Filipino. */
+export function placeLabel(code: string, t?: T): string {
   const a = getArea(code);
-  if (!a) return "Unknown area";
-  if (a.type === "national") return "Nationwide";
-  if (a.type === "province") return `${a.name} (whole province)`;
+  if (!a) return "?";
+  if (a.type === "national") return t ? t("place.nationwide") : "Nationwide";
+  if (a.type === "province") return t ? t("place.wholeProvince", { province: a.name }) : `${a.name} (whole province)`;
   const prov = getArea(a.parent_code);
   return prov && isTown(a) ? `${displayName(a)}, ${prov.name}` : displayName(a);
 }

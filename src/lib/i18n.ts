@@ -1,0 +1,448 @@
+"use client";
+
+// English / Filipino text for the whole app.
+// Add a key to BOTH `en` and `fil`. Use {name} for values filled in at runtime: t("found", { town: "Lubao" }).
+
+import { useCallback } from "react";
+import { usePrefs } from "./prefs";
+
+export type Lang = "en" | "fil";
+
+const en = {
+  // navigation & header
+  "nav.today": "Today",
+  "nav.calendar": "Calendar",
+  "nav.browse": "Browse",
+  "nav.settings": "Settings",
+  "header.setArea": "Set your area",
+
+  // welcome
+  "welcome.title": "May pasok ba bukas?",
+  "welcome.body": "Deklarado checks trusted sources every few hours and tells you if classes are suspended in your area.",
+  "welcome.where": "Where are you?",
+
+  // area picker
+  "area.useLocation": "Use my location",
+  "area.locating": "Finding your town…",
+  "area.privacy": "Your location stays on your phone — it's only used to find the nearest town.",
+  "area.noGeo": "This browser can't share location. Please pick your town below.",
+  "area.outside": "You seem to be outside Pampanga, which is all Deklarado covers for now. Pick a town below.",
+  "area.found": "Found you near {town}. You can change it below.",
+  "area.denied": "Location permission was denied. Pick your town below instead.",
+  "area.failed": "Couldn't get your location. Pick your town below.",
+  "area.region": "Region",
+  "area.province": "Province",
+  "area.town": "City / Town",
+  "area.choose": "Choose your city or town",
+
+  // today
+  "today.for": "For {levels}",
+  "today.allLevels": "all levels",
+  "today.today": "Today",
+  "today.tomorrow": "Tomorrow",
+  "today.details": "Details",
+  "today.comingUp": "Coming up this week",
+
+  // day status
+  "status.none": "No suspension announced",
+  "status.none.detail": "Classes as usual unless an announcement comes in.",
+  "status.resumed.detail": "A suspension was lifted — classes resume.",
+  "status.walangPasok": "Walang pasok",
+  "status.holiday.detail": "Non-working day — no classes and no work.",
+  "status.online": "No face-to-face classes",
+  "status.online.detail": "Classes move online / modular. Check with your school.",
+  "status.suspended.detail": "Classes suspended — {levels}.",
+  "status.from": "Walang pasok from {time}",
+  "status.from.detail": "Morning classes may still push through.",
+  "status.some": "Some levels suspended",
+
+  // announcement card
+  "kind.class_suspension": "Class suspension",
+  "kind.work_suspension": "Work suspension",
+  "kind.holiday": "Non-working day",
+  "kind.resumption": "Classes resume",
+  "tag.noF2f": "No face-to-face classes",
+  "tag.from": "From {time}",
+  "tag.wholeDay": "Whole day",
+  "tag.govWork": "Gov't work suspended",
+  "levels.all": "All levels",
+  "sector.both": "Public & private",
+  "sector.public": "Public schools",
+  "sector.private": "Private schools",
+  "card.reason": "Reason:",
+  "card.reportedBy": "Reported by {source}",
+  "card.lguPost": "LGU's own post",
+  "card.official": "Official",
+  "card.officialTitle": "Official government source",
+
+  // places
+  "place.nationwide": "Nationwide",
+  "place.wholeProvince": "{province} (whole province)",
+
+  // notices
+  "notice.demo": "Demo data.",
+  "notice.demo.body": "These are sample announcements — the live database isn't connected yet.",
+  "notice.checked": "Sources last checked {ago}",
+  "notice.notChecked": "Sources not checked yet",
+  "notice.problems": "{n} source{s} had a problem",
+  "notice.error": "Couldn't load announcements: {message}. Check your connection and try again.",
+  "notice.disclaimer": "Deklarado collects announcements automatically and can make mistakes. Always confirm with your LGU or school's official post.",
+  "notice.offline": "You're offline.",
+  "notice.offline.body": "Showing announcements saved on this phone{when}.",
+  "notice.offline.when": " from {ago}",
+  "loading": "Loading…",
+
+  // time ago
+  "ago.now": "just now",
+  "ago.min": "{n} min ago",
+  "ago.hour": "{n} hour{s} ago",
+  "ago.day": "{n} day{s} ago",
+
+  // school levels
+  "level.kinder": "Kindergarten",
+  "level.kinder.short": "Kinder",
+  "level.elementary": "Elementary",
+  "level.elementary.short": "Elem",
+  "level.jhs": "Junior High School",
+  "level.jhs.short": "JHS",
+  "level.shs": "Senior High School",
+  "level.shs.short": "SHS",
+  "level.college": "College",
+  "level.college.short": "College",
+
+  // browse
+  "browse.title": "Browse announcements",
+  "browse.thisWeek": "This week",
+  "browse.upcoming": "Upcoming",
+  "browse.past30": "Past 30 days",
+  "browse.from": "From",
+  "browse.to": "To",
+  "browse.allTowns": "All cities and towns",
+  "browse.level": "Level",
+  "browse.allLevels": "All levels",
+  "browse.time": "Time",
+  "browse.anyTime": "Any time",
+  "browse.wholeDay": "Whole day",
+  "browse.later": "Starts later in the day",
+  "browse.badRange": "“From” must be on or before “To”.",
+  "browse.count": "{n} announcement{s}",
+  "browse.empty": "No suspensions found for these filters.",
+  "browse.todayChip": "Today",
+  "browse.filters": "Filters",
+
+  // calendar
+  "cal.title": "Calendar",
+  "cal.weekdays": "Sun,Mon,Tue,Wed,Thu,Fri,Sat",
+  "cal.setArea": "Set your area first",
+  "cal.setArea.body": "The calendar shows suspensions for your city or town.",
+  "cal.chooseArea": "Choose area",
+  "cal.prev": "Previous month",
+  "cal.next": "Next month",
+  "cal.hasSuspension": ", has a suspension",
+  "cal.legend.none": "No classes",
+  "cal.legend.partial": "Some levels / half day",
+  "cal.legend.online": "Online only",
+  "cal.selected": "Selected day",
+
+  // settings
+  "settings.title": "Settings",
+  "settings.area": "Your area",
+  "settings.area.showing": "Showing announcements for {place}, plus province-wide and nationwide ones.",
+  "settings.area.choose": "Choose where you live or study.",
+  "settings.levels": "School levels you follow",
+  "settings.levels.body": "The Today screen and notifications only count suspensions for these levels.",
+  "settings.language": "Language",
+  "settings.sources": "About the sources",
+  "settings.sources.every": "All sources are checked automatically every 3 hours.",
+  "settings.sources.gma": "GMA News – Walang Pasok:",
+  "settings.sources.gma.body": "nationwide suspension lists, usually with links to each LGU's own post.",
+  "settings.sources.lgu": "LGU websites:",
+  "settings.sources.lgu.body": "official posts from San Fernando, Angeles, Guagua and Lubao.",
+  "settings.sources.deped": "DepEd:",
+  "settings.sources.deped.body": "nationwide suspensions only.",
+  "settings.sources.pagasa": "PAGASA:",
+  "settings.sources.pagasa.body": "Wind Signals for your town, shown as a weather alert. Under Executive Order 130 (2026), automatic suspensions will follow DepEd's new thresholds once published.",
+
+  // notifications
+  "notif.title": "Notifications",
+  "notif.on": "On",
+  "notif.body": "Get an alert on this phone when a suspension is announced for your area and levels.",
+  "notif.checking": "Checking…",
+  "notif.unsupported": "This browser doesn't support notifications. Try Chrome on Android, or install the app on iPhone.",
+  "notif.noKey": "Notifications aren't set up on this server yet.",
+  "notif.ios": "On iPhone, first add Deklarado to your Home Screen: tap Share → Add to Home Screen, then open it from there and come back here.",
+  "notif.denied": "Notifications are blocked for this site. Allow them in your browser's site settings, then reload this page.",
+  "notif.turnOn": "Turn on notifications",
+  "notif.turningOn": "Turning on…",
+  "notif.turnOff": "Turn off",
+  "notif.turningOff": "Turning off…",
+  "notif.test": "Send a test",
+  "notif.chooseArea": "Choose your city or town above first.",
+  "notif.enabled": "Notifications are on. We'll alert you when classes are suspended in your area.",
+  "notif.testSent": "Sample notification sent. Didn't see it? Check your phone's notification settings.",
+  "notif.sample.title": "Walang pasok — sample alert",
+  "notif.sample.body": "This is how Deklarado will alert you when classes are suspended in your area.",
+
+  // wind signal
+  "signal.up": "Wind Signal No. {level} is up",
+  "signal.storm": "Tropical cyclone",
+  "signal.issued": "PAGASA, issued {issued}",
+  "signal.note": "This is a weather alert, not a class suspension. Watch for announcements from your LGU or school.",
+  "signal.bulletin": "PAGASA bulletin",
+
+  // share
+  "share.button": "Share",
+  "share.copied": "Copied! Paste it in Messenger or SMS.",
+  "share.failed": "Couldn't share. Try again.",
+  "share.via": "via Deklarado",
+
+  // report
+  "report.button": "Report a mistake",
+  "report.title": "What's wrong with this announcement?",
+  "report.wrong_place": "Wrong place",
+  "report.wrong_date": "Wrong date",
+  "report.wrong_levels": "Wrong levels",
+  "report.not_suspension": "Not actually a suspension",
+  "report.other": "Something else",
+  "report.note": "Details (optional)",
+  "report.notePlaceholder": "e.g. The mayor's post says only Kinder to Grade 3",
+  "report.send": "Send report",
+  "report.sending": "Sending…",
+  "report.cancel": "Cancel",
+  "report.thanks": "Thanks! Our team will check it.",
+  "report.privacy": "No personal information is sent — only your answer.",
+  "report.unavailable": "Reports aren't available yet — the database isn't connected.",
+  "report.failed": "Couldn't send the report. Check your connection and try again.",
+  "notif.unavailable": "Notifications aren't available yet — the database isn't connected.",
+  "notif.failed": "Couldn't turn on notifications. Check your connection and try again.",
+  "sample.title": "Show sample data",
+  "sample.body": "See how the app looks during a suspension, using made-up examples. Turn it off to see real announcements.",
+  "sample.banner": "Sample data is on.",
+  "sample.banner.body": "These are made-up examples, not real announcements.",
+  "sample.turnOff": "Turn off",
+} as const;
+
+export type TKey = keyof typeof en;
+
+const fil: Record<TKey, string> = {
+  "nav.today": "Ngayon",
+  "nav.calendar": "Kalendaryo",
+  "nav.browse": "Anunsyo",
+  "nav.settings": "Settings",
+  "header.setArea": "Itakda ang lugar mo",
+
+  "welcome.title": "May pasok ba bukas?",
+  "welcome.body": "Sinusuri ng Deklarado ang mga mapagkakatiwalaang source kada ilang oras at sasabihan ka kung suspendido ang klase sa lugar mo.",
+  "welcome.where": "Nasaan ka?",
+
+  "area.useLocation": "Gamitin ang lokasyon ko",
+  "area.locating": "Hinahanap ang bayan mo…",
+  "area.privacy": "Nananatili sa phone mo ang lokasyon mo — ginagamit lang ito para mahanap ang pinakamalapit na bayan.",
+  "area.noGeo": "Hindi kayang magbahagi ng lokasyon ng browser na ito. Pumili na lang ng bayan sa ibaba.",
+  "area.outside": "Mukhang nasa labas ka ng Pampanga, na siya lang muna ang sakop ng Deklarado. Pumili ng bayan sa ibaba.",
+  "area.found": "Nahanap ka malapit sa {town}. Puwede mo itong palitan sa ibaba.",
+  "area.denied": "Hindi pinayagan ang lokasyon. Pumili na lang ng bayan sa ibaba.",
+  "area.failed": "Hindi makuha ang lokasyon mo. Pumili ng bayan sa ibaba.",
+  "area.region": "Rehiyon",
+  "area.province": "Probinsya",
+  "area.town": "Lungsod / Bayan",
+  "area.choose": "Piliin ang lungsod o bayan mo",
+
+  "today.for": "Para sa {levels}",
+  "today.allLevels": "lahat ng antas",
+  "today.today": "Ngayon",
+  "today.tomorrow": "Bukas",
+  "today.details": "Mga detalye",
+  "today.comingUp": "Sa mga susunod na araw",
+
+  "status.none": "Walang anunsyong suspensyon",
+  "status.none.detail": "May pasok gaya ng dati, maliban kung may bagong anunsyo.",
+  "status.resumed.detail": "Binawi ang suspensyon — tuloy ang klase.",
+  "status.walangPasok": "Walang pasok",
+  "status.holiday.detail": "Non-working day — walang klase at walang trabaho.",
+  "status.online": "Walang face-to-face na klase",
+  "status.online.detail": "Online o modular muna ang klase. Alamin sa paaralan mo.",
+  "status.suspended.detail": "Suspendido ang klase — {levels}.",
+  "status.from": "Walang pasok simula {time}",
+  "status.from.detail": "Maaaring tuloy pa rin ang klase sa umaga.",
+  "status.some": "May ilang antas na suspendido",
+
+  "kind.class_suspension": "Suspensyon ng klase",
+  "kind.work_suspension": "Suspensyon ng trabaho",
+  "kind.holiday": "Non-working day",
+  "kind.resumption": "Tuloy ang klase",
+  "tag.noF2f": "Walang face-to-face",
+  "tag.from": "Simula {time}",
+  "tag.wholeDay": "Buong araw",
+  "tag.govWork": "Walang pasok sa gobyerno",
+  "levels.all": "Lahat ng antas",
+  "sector.both": "Pampubliko at pribado",
+  "sector.public": "Pampublikong paaralan",
+  "sector.private": "Pribadong paaralan",
+  "card.reason": "Dahilan:",
+  "card.reportedBy": "Iniulat ng {source}",
+  "card.lguPost": "Post mismo ng LGU",
+  "card.official": "Opisyal",
+  "card.officialTitle": "Opisyal na source ng gobyerno",
+
+  "place.nationwide": "Buong bansa",
+  "place.wholeProvince": "{province} (buong probinsya)",
+
+  "notice.demo": "Demo data.",
+  "notice.demo.body": "Mga halimbawang anunsyo lang ito — hindi pa nakakonekta ang totoong database.",
+  "notice.checked": "Huling sinuri ang mga source {ago}",
+  "notice.notChecked": "Hindi pa nasusuri ang mga source",
+  "notice.problems": "{n} source ang nagkaproblema",
+  "notice.error": "Hindi ma-load ang mga anunsyo: {message}. Tingnan ang koneksyon mo at subukang muli.",
+  "notice.disclaimer": "Awtomatikong kinukuha ng Deklarado ang mga anunsyo at puwede itong magkamali. Laging kumpirmahin sa opisyal na post ng LGU o paaralan mo.",
+  "notice.offline": "Offline ka.",
+  "notice.offline.body": "Ipinapakita ang mga anunsyong naka-save sa phone mo{when}.",
+  "notice.offline.when": " mula {ago}",
+  "loading": "Naglo-load…",
+
+  "ago.now": "ngayon lang",
+  "ago.min": "{n} minuto na ang nakalipas",
+  "ago.hour": "{n} oras na ang nakalipas",
+  "ago.day": "{n} araw na ang nakalipas",
+
+  "level.kinder": "Kindergarten",
+  "level.kinder.short": "Kinder",
+  "level.elementary": "Elementarya",
+  "level.elementary.short": "Elem",
+  "level.jhs": "Junior High School",
+  "level.jhs.short": "JHS",
+  "level.shs": "Senior High School",
+  "level.shs.short": "SHS",
+  "level.college": "Kolehiyo",
+  "level.college.short": "Kolehiyo",
+
+  "browse.title": "Hanapin ang mga anunsyo",
+  "browse.thisWeek": "Ngayong linggo",
+  "browse.upcoming": "Paparating",
+  "browse.past30": "Nakaraang 30 araw",
+  "browse.from": "Mula",
+  "browse.to": "Hanggang",
+  "browse.allTowns": "Lahat ng lungsod at bayan",
+  "browse.level": "Antas",
+  "browse.allLevels": "Lahat ng antas",
+  "browse.time": "Oras",
+  "browse.anyTime": "Kahit anong oras",
+  "browse.wholeDay": "Buong araw",
+  "browse.later": "Mamaya pa magsisimula",
+  "browse.badRange": "Dapat nauuna o kapareho ng “Hanggang” ang “Mula”.",
+  "browse.count": "{n} anunsyo",
+  "browse.empty": "Walang nakitang suspensyon para sa mga filter na ito.",
+  "browse.todayChip": "Ngayon",
+  "browse.filters": "Mga filter",
+
+  "cal.title": "Kalendaryo",
+  "cal.weekdays": "Lin,Lun,Mar,Miy,Huw,Biy,Sab",
+  "cal.setArea": "Itakda muna ang lugar mo",
+  "cal.setArea.body": "Ipinapakita ng kalendaryo ang mga suspensyon sa lungsod o bayan mo.",
+  "cal.chooseArea": "Pumili ng lugar",
+  "cal.prev": "Nakaraang buwan",
+  "cal.next": "Susunod na buwan",
+  "cal.hasSuspension": ", may suspensyon",
+  "cal.legend.none": "Walang klase",
+  "cal.legend.partial": "Ilang antas / kalahating araw",
+  "cal.legend.online": "Online lang",
+  "cal.selected": "Napiling araw",
+
+  "settings.title": "Settings",
+  "settings.area": "Ang lugar mo",
+  "settings.area.showing": "Ipinapakita ang mga anunsyo para sa {place}, pati ang para sa buong probinsya at buong bansa.",
+  "settings.area.choose": "Piliin kung saan ka nakatira o nag-aaral.",
+  "settings.levels": "Mga antas na sinusubaybayan mo",
+  "settings.levels.body": "Ang mga suspensyon lang para sa mga antas na ito ang bibilangin sa Ngayon at sa mga notification.",
+  "settings.language": "Wika",
+  "settings.sources": "Tungkol sa mga source",
+  "settings.sources.every": "Awtomatikong sinusuri ang lahat ng source kada 3 oras.",
+  "settings.sources.gma": "GMA News – Walang Pasok:",
+  "settings.sources.gma.body": "listahan ng mga suspensyon sa buong bansa, kadalasang may link sa post mismo ng bawat LGU.",
+  "settings.sources.lgu": "Website ng mga LGU:",
+  "settings.sources.lgu.body": "mga opisyal na post ng San Fernando, Angeles, Guagua at Lubao.",
+  "settings.sources.deped": "DepEd:",
+  "settings.sources.deped.body": "mga suspensyon sa buong bansa lang.",
+  "settings.sources.pagasa": "PAGASA:",
+  "settings.sources.pagasa.body": "Wind Signal sa bayan mo, ipinapakita bilang babala sa panahon. Sa ilalim ng Executive Order 130 (2026), susundin ng awtomatikong suspensyon ang bagong pamantayan ng DepEd kapag nailabas na.",
+
+  "notif.title": "Mga notification",
+  "notif.on": "Naka-on",
+  "notif.body": "Makatanggap ng alerto sa phone na ito kapag may suspensyon sa lugar at antas mo.",
+  "notif.checking": "Sinusuri…",
+  "notif.unsupported": "Hindi sinusuportahan ng browser na ito ang mga notification. Subukan ang Chrome sa Android, o i-install ang app sa iPhone.",
+  "notif.noKey": "Hindi pa naka-set up ang mga notification sa server na ito.",
+  "notif.ios": "Sa iPhone, idagdag muna ang Deklarado sa Home Screen: pindutin ang Share → Add to Home Screen, buksan ito mula roon, at bumalik dito.",
+  "notif.denied": "Naka-block ang mga notification para sa site na ito. Payagan ito sa site settings ng browser mo, saka i-reload ang page.",
+  "notif.turnOn": "I-on ang mga notification",
+  "notif.turningOn": "Ino-on…",
+  "notif.turnOff": "I-off",
+  "notif.turningOff": "Ino-off…",
+  "notif.test": "Magpadala ng test",
+  "notif.chooseArea": "Piliin muna ang lungsod o bayan mo sa itaas.",
+  "notif.enabled": "Naka-on na ang mga notification. Aalertuhan ka namin kapag suspendido ang klase sa lugar mo.",
+  "notif.testSent": "Naipadala ang sample na notification. Hindi mo nakita? Tingnan ang notification settings ng phone mo.",
+  "notif.sample.title": "Walang pasok — sample na alerto",
+  "notif.sample.body": "Ganito ka aalertuhan ng Deklarado kapag suspendido ang klase sa lugar mo.",
+
+  "signal.up": "Nakataas ang Wind Signal No. {level}",
+  "signal.storm": "Bagyo",
+  "signal.issued": "PAGASA, inilabas {issued}",
+  "signal.note": "Babala ito sa panahon, hindi suspensyon ng klase. Abangan ang anunsyo ng LGU o paaralan mo.",
+  "signal.bulletin": "Bulletin ng PAGASA",
+
+  "share.button": "I-share",
+  "share.copied": "Nakopya na! I-paste sa Messenger o SMS.",
+  "share.failed": "Hindi ma-share. Subukang muli.",
+  "share.via": "mula sa Deklarado",
+
+  "report.button": "I-report ang mali",
+  "report.title": "Ano ang mali sa anunsyong ito?",
+  "report.wrong_place": "Maling lugar",
+  "report.wrong_date": "Maling petsa",
+  "report.wrong_levels": "Maling antas",
+  "report.not_suspension": "Hindi naman suspensyon",
+  "report.other": "Iba pa",
+  "report.note": "Detalye (opsyonal)",
+  "report.notePlaceholder": "hal. Kinder hanggang Grade 3 lang ang sabi sa post ng mayor",
+  "report.send": "Ipadala",
+  "report.sending": "Ipinapadala…",
+  "report.cancel": "Kanselahin",
+  "report.thanks": "Salamat! Susuriin ito ng aming team.",
+  "report.privacy": "Walang personal na impormasyong ipinapadala — ang sagot mo lang.",
+  "report.unavailable": "Hindi pa puwedeng mag-report — hindi pa nakakonekta ang database.",
+  "report.failed": "Hindi maipadala ang report. Tingnan ang koneksyon mo at subukang muli.",
+  "notif.unavailable": "Hindi pa available ang mga notification — hindi pa nakakonekta ang database.",
+  "notif.failed": "Hindi ma-on ang mga notification. Tingnan ang koneksyon mo at subukang muli.",
+  "sample.title": "Ipakita ang sample data",
+  "sample.body": "Tingnan kung ano ang itsura ng app kapag may suspensyon, gamit ang mga halimbawa. I-off ito para makita ang totoong mga anunsyo.",
+  "sample.banner": "Naka-on ang sample data.",
+  "sample.banner.body": "Mga halimbawa lang ito, hindi totoong anunsyo.",
+  "sample.turnOff": "I-off",
+};
+
+const DICTS: Record<Lang, Record<TKey, string>> = { en, fil };
+
+export type T = (key: TKey, vars?: Record<string, string | number>) => string;
+
+export function translate(lang: Lang, key: TKey, vars?: Record<string, string | number>): string {
+  let s: string = DICTS[lang][key] ?? en[key];
+  // {s} = English plural ending when {n} is not 1 (Filipino nouns don't change)
+  const all: Record<string, string | number> = { ...vars };
+  if (typeof all.n === "number" && all.s === undefined) all.s = all.n === 1 ? "" : "s";
+  for (const [k, v] of Object.entries(all)) s = s.replaceAll(`{${k}}`, String(v));
+  return s;
+}
+
+/** "Kinder", "Elementarya", … */
+export const levelName = (t: T, id: string, short = false) => t(`level.${id}${short ? ".short" : ""}` as TKey);
+
+/** Intl locale for dates: Filipino dates read "Biyernes, Nobyembre 13". */
+export const locale = (lang: Lang) => (lang === "fil" ? "fil-PH" : "en-PH");
+
+export function useT() {
+  const { prefs } = usePrefs();
+  const lang: Lang = prefs.lang === "fil" ? "fil" : "en";
+  const t = useCallback<T>((key, vars) => translate(lang, key, vars), [lang]);
+  return { t, lang };
+}

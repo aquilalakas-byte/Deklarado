@@ -5,15 +5,14 @@ import { useState } from "react";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
 import { ClientOnly } from "@/components/ClientOnly";
 import { ChevronLeft, ChevronRight } from "@/components/Icons";
-import { DemoBanner, ErrorBox } from "@/components/Notices";
+import { DemoBanner, ErrorBox, Loading, OfflineBanner } from "@/components/Notices";
 import { StatusCard } from "@/components/StatusCard";
 import { affectingCodes, displayName, getArea } from "@/lib/areas";
 import { longDate, manilaToday, monthLabel, shortDate } from "@/lib/dates";
+import { useT } from "@/lib/i18n";
 import { usePrefs } from "@/lib/prefs";
 import { dayStatus, type DayState } from "@/lib/status";
 import { useAnnouncements } from "@/lib/useAnnouncements";
-
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const DOT: Record<DayState, string> = {
   none: "",
@@ -26,11 +25,12 @@ const DOT: Record<DayState, string> = {
 const pad = (n: number) => String(n).padStart(2, "0");
 
 export default function CalendarPage() {
-  return <ClientOnly fallback={<p className="py-6 text-center text-sm text-muted">Loading…</p>}><CalendarView /></ClientOnly>;
+  return <ClientOnly fallback={<Loading />}><CalendarView /></ClientOnly>;
 }
 
 function CalendarView() {
   const { prefs } = usePrefs();
+  const { t, lang } = useT();
   const today = manilaToday();
   const [ym, setYm] = useState({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) });
   const [selected, setSelected] = useState(today);
@@ -40,14 +40,14 @@ function CalendarView() {
   const firstWeekday = new Date(Date.UTC(ym.y, ym.m - 1, 1)).getUTCDay();
   const from = `${ym.y}-${pad(ym.m)}-01`;
   const to = `${ym.y}-${pad(ym.m)}-${pad(daysInMonth)}`;
-  const { data, error, loading } = useAnnouncements(area ? affectingCodes(area.code) : null, from, to);
+  const { data, error, loading, offline, savedAt } = useAnnouncements(area ? affectingCodes(area.code) : null, from, to);
 
   if (!area) {
     return (
       <div className="rounded-2xl border border-line bg-surface p-6 text-center">
-        <p className="font-semibold">Set your area first</p>
-        <p className="mt-1 text-sm text-muted">The calendar shows suspensions for your city or town.</p>
-        <Link href="/settings" className="mt-4 inline-block rounded-xl bg-brand px-4 py-2 font-semibold text-brand-ink">Choose area</Link>
+        <p className="font-semibold">{t("cal.setArea")}</p>
+        <p className="mt-1 text-sm text-muted">{t("cal.setArea.body")}</p>
+        <Link href="/settings" className="mt-4 inline-block rounded-xl bg-brand px-4 py-2 font-semibold text-brand-ink">{t("cal.chooseArea")}</Link>
       </div>
     );
   }
@@ -57,7 +57,7 @@ function CalendarView() {
     const d = new Date(Date.UTC(ym.y, ym.m - 1 + delta, 1));
     setYm({ y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 });
   };
-  const sel = dayStatus(all, selected, prefs.levels);
+  const sel = dayStatus(all, selected, prefs.levels, t);
 
   const cells: (string | null)[] = [
     ...Array.from({ length: firstWeekday }, () => null),
@@ -67,26 +67,27 @@ function CalendarView() {
   return (
     <div className="space-y-4">
       <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-bold tracking-tight">Calendar</h1>
+        <h1 className="text-xl font-bold tracking-tight">{t("cal.title")}</h1>
         <span className="text-sm text-muted">{displayName(area)}</span>
       </div>
+      {offline && <OfflineBanner savedAt={savedAt} />}
       {data?.demo && <DemoBanner />}
       {error && <ErrorBox message={error} />}
 
       <section className="rounded-2xl border border-line bg-surface p-3">
         <div className="mb-2 flex items-center justify-between">
-          <button type="button" onClick={() => move(-1)} aria-label="Previous month" className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-text"><ChevronLeft width={20} height={20} /></button>
-          <h2 className="font-semibold">{monthLabel(ym.y, ym.m)}</h2>
-          <button type="button" onClick={() => move(1)} aria-label="Next month" className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-text"><ChevronRight width={20} height={20} /></button>
+          <button type="button" onClick={() => move(-1)} aria-label={t("cal.prev")} className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-text"><ChevronLeft width={20} height={20} /></button>
+          <h2 className="font-semibold">{monthLabel(ym.y, ym.m, lang)}</h2>
+          <button type="button" onClick={() => move(1)} aria-label={t("cal.next")} className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-text"><ChevronRight width={20} height={20} /></button>
         </div>
 
         <div className="grid grid-cols-7 text-center text-xs font-medium text-muted">
-          {WEEKDAYS.map((d) => <div key={d} className="py-1">{d}</div>)}
+          {t("cal.weekdays").split(",").map((d) => <div key={d} className="py-1">{d}</div>)}
         </div>
         <div className={`grid grid-cols-7 gap-1 ${loading ? "opacity-50" : ""}`}>
           {cells.map((date, i) => {
             if (!date) return <div key={`e${i}`} />;
-            const state = dayStatus(all, date, prefs.levels).state;
+            const state = dayStatus(all, date, prefs.levels, t).state;
             const isSel = date === selected;
             const isToday = date === today;
             return (
@@ -94,7 +95,7 @@ function CalendarView() {
                 key={date}
                 type="button"
                 onClick={() => setSelected(date)}
-                aria-label={`${longDate(date)}${state !== "none" ? ", has a suspension" : ""}`}
+                aria-label={`${longDate(date, lang)}${state !== "none" ? t("cal.hasSuspension") : ""}`}
                 aria-pressed={isSel}
                 className={`flex aspect-square flex-col items-center justify-center rounded-xl text-sm transition
                   ${isSel ? "bg-brand text-brand-ink" : isToday ? "bg-brand-soft font-semibold text-brand" : "hover:bg-surface-2"}`}
@@ -107,13 +108,13 @@ function CalendarView() {
         </div>
 
         <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted">
-          <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-danger" /> No classes</span>
-          <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-warn" /> Some levels / half day</span>
-          <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-info" /> Online only</span>
+          <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-danger" /> {t("cal.legend.none")}</span>
+          <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-warn" /> {t("cal.legend.partial")}</span>
+          <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-info" /> {t("cal.legend.online")}</span>
         </div>
       </section>
 
-      <StatusCard label={selected === today ? "Today" : "Selected day"} date={shortDate(selected)} status={sel} />
+      <StatusCard label={selected === today ? t("today.today") : t("cal.selected")} date={shortDate(selected, lang)} status={sel} />
       {sel.matches.map((a) => <AnnouncementCard key={a.id} a={a} />)}
     </div>
   );

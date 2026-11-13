@@ -24,8 +24,9 @@ notifications. The full plan is in [docs/PLAN.md](docs/PLAN.md).
 3. Create a free [Supabase](https://supabase.com) project. In **SQL Editor**, run these files in order:
    1. `supabase/migrations/0001_init.sql`
    2. `supabase/migrations/0002_wind_signals.sql`
-   3. `supabase/seed/0001_areas.sql`
-   4. `supabase/seed/0002_sources.sql`
+   3. `supabase/migrations/0003_reports_and_language.sql`
+   4. `supabase/seed/0001_areas.sql`
+   5. `supabase/seed/0002_sources.sql`
 4. Copy `.env.example` to `.env.local` and fill in the keys from **Project Settings → API**.
 5. Run `npm run dev` and open http://localhost:3000.
 
@@ -75,9 +76,18 @@ After saving, the scanner sends push notifications for new announcements (`scann
 a town's announcement goes to people in that town, a province's to everyone in the province, a
 nationwide one to everyone — only if the school levels match. Each announcement is sent once.
 
+## App features
+
+| Feature | Where |
+|---|---|
+| **English / Filipino** | All text is in `src/lib/i18n.ts` (add every new key to both `en` and `fil`). Switch in Settings or on the welcome screen. Notifications are sent in the user's language. |
+| **Share** | Each announcement card → Share (phone share sheet, or copies the text). `src/components/ShareButton.tsx` |
+| **Report a mistake** | Each card → Report a mistake. Saved in the `reports` table (no personal data). Review them in Supabase → Table Editor → `reports` and set `status` to `confirmed` or `dismissed`. |
+| **Works offline** | `public/sw.js` saves the pages and the latest announcements. With no signal, the app shows the saved copy with an "offline" notice. Test it with a production build (`npm run build` then `npm start`) — offline mode is not reliable in `npm run dev`. |
+
 ## Push notifications
 
-- `public/sw.js` is the service worker that shows notifications.
+- `public/sw.js` is the service worker that shows notifications (and handles offline mode).
 - Settings → **Turn on notifications** saves the phone's subscription through `/api/push`.
 - **Send a test** shows a sample notification right away (no server needed).
 - On iPhone, notifications only work after **Share → Add to Home Screen** (iOS 16.4+).
