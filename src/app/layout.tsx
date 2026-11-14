@@ -10,7 +10,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: { default: "Deklarado", template: "%s · Deklarado" },
-  description: "Class and work suspension alerts for Pampanga, from trusted sources.",
+  description: "Class and work suspension alerts for the Philippines, from trusted sources.",
   applicationName: "Deklarado",
   appleWebApp: { capable: true, title: "Deklarado", statusBarStyle: "default" },
   icons: {

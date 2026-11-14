@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Deklarado — Class Suspension Alerts",
     short_name: "Deklarado",
-    description: "Class and work suspension alerts for Pampanga, from trusted sources.",
+    description: "Class and work suspension alerts for the Philippines, from trusted sources.",
     start_url: "/",
     scope: "/",
     display: "standalone",

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
 import { ClientOnly } from "@/components/ClientOnly";
 import { DemoBanner, Disclaimer, ErrorBox, LastChecked, Loading, OfflineBanner } from "@/components/Notices";
-import { descendantCodes, displayName, getArea, NATIONAL_CODE, provincesOf, regions, townsOf } from "@/lib/areas";
+import { DEFAULT_PROVINCE, descendantCodes, displayName, getArea, NATIONAL_CODE, provincesOf, regions, townsOf } from "@/lib/areas";
 import { addDays, longDate, manilaToday } from "@/lib/dates";
 import { levelName, useT, type TKey } from "@/lib/i18n";
 import { usePrefs } from "@/lib/prefs";
@@ -28,13 +28,13 @@ function Browse() {
   const { prefs } = usePrefs();
   const { t, lang } = useT();
   const today = manilaToday();
-  const firstRegion = regions()[0]?.code ?? "";
   const home = getArea(prefs.areaCode);
+  const homeProvince = home?.parent_code ?? DEFAULT_PROVINCE;
 
   const [from, setFrom] = useState(addDays(today, -3));
   const [to, setTo] = useState(addDays(today, 7));
-  const [region, setRegion] = useState(firstRegion);
-  const [province, setProvince] = useState(home?.parent_code ?? provincesOf(firstRegion)[0]?.code ?? "");
+  const [region, setRegion] = useState(getArea(homeProvince)?.parent_code ?? "");
+  const [province, setProvince] = useState(homeProvince);
   const [town, setTown] = useState<string>("all");
   const [level, setLevel] = useState<Level | "all">("all");
   const [time, setTime] = useState<TimeFilter>("any");

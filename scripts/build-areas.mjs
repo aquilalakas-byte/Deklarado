@@ -1,15 +1,16 @@
-// Builds the area list (Philippines → Central Luzon → Pampanga → 22 cities/towns)
+// Builds the nationwide area list (Philippines → 17 regions → 81 provinces + Metro Manila → 1,634 cities/towns)
 // from the public PSGC API, then writes:
 //   src/data/areas.json           (used by the app's area picker and the scanner)
-//   supabase/seed/0001_areas.sql  (paste into Supabase SQL Editor)
+//   supabase/seed/0001_areas.sql  (paste into Supabase SQL Editor, or run scripts/load-areas.mjs)
 //
 // Run:  node scripts/build-areas.mjs
-// To add another province later, add its PSGC code to PROVINCES.
+//
+// Pampanga stays the pilot area (it also has LGU website sources); the rest of the country
+// is covered through the national sources (GMA News, PAGASA, DepEd).
 
 import { writeFile, mkdir } from "node:fs/promises";
 
 const API = "https://psgc.gitlab.io/api";
-const PROVINCES = ["035400000"]; // Pampanga
 
 // Extra spellings that show up in news articles and LGU posts.
 const ALIASES = {
@@ -22,6 +23,20 @@ const ALIASES = {
   "035420000": ["Sta. Rita, Pampanga"],
 };
 
+// Other names for regions used in news and bulletins (the first one is shown in the app).
+const REGION_ALIASES = {
+  "130000000": ["NCR", "National Capital Region"],
+  "140000000": ["CAR", "Cordillera Administrative Region", "Cordillera"],
+  "150000000": ["BARMM", "Bangsamoro"],
+  "170000000": ["MIMAROPA", "Region IV-B"],
+  "040000000": ["CALABARZON", "Region IV-A", "Region 4A"],
+};
+
+// Metro Manila has no province, so its cities get a "Metro Manila" group (not a real PSGC code).
+const METRO_MANILA = { code: "139900000", name: "Metro Manila", type: "province", parent_code: "130000000", aliases: ["NCR", "National Capital Region", "Kamaynilaan"] };
+// Two independent cities outside NCR with no province, placed in the province they are in.
+const PLACE_IN = { "City of Isabela": "Basilan", "City of Cotabato": "Maguindanao" };
+
 async function get(path) {
   const res = await fetch(`${API}${path}`);
   if (!res.ok) throw new Error(`${path} → HTTP ${res.status}`);
@@ -30,38 +45,44 @@ async function get(path) {
 
 // Some names come back as "City of San Fernando (Capital)" — drop the note in brackets.
 const clean = (name) => name.replace(/\s*\(.*?\)\s*/g, "").trim();
+const num = (roman) => ({ I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9, X: 10, XI: 11, XII: 12, XIII: 13 })[roman];
 
 const areas = [{ code: "000000000", name: "Philippines", type: "national", parent_code: null, aliases: ["nationwide", "Metro Manila and nationwide"] }];
-const regionCodes = new Set();
 
-for (const provCode of PROVINCES) {
-  const prov = await get(`/provinces/${provCode}/`);
-  if (!regionCodes.has(prov.regionCode)) {
-    const region = await get(`/regions/${prov.regionCode}/`);
-    areas.push({ code: region.code, name: region.regionName ?? region.name, type: "region", parent_code: "000000000", aliases: [region.name].filter(Boolean) });
-    regionCodes.add(prov.regionCode);
-  }
-  areas.push({ code: prov.code, name: prov.name, type: "province", parent_code: prov.regionCode, aliases: [`${prov.name} province`] });
+const regions = await get("/regions/");
+for (const r of regions.sort((a, b) => a.code.localeCompare(b.code))) {
+  // Keep the existing style: name = "Region III", first alias = "Central Luzon"
+  const short = r.regionName && r.regionName !== r.name ? r.regionName : r.name;
+  const roman = short.match(/^Region ([IVX]+)$/)?.[1];
+  const aliases = [...new Set([r.name, ...(REGION_ALIASES[r.code] ?? []), ...(roman ? [`Region ${num(roman)}`] : [])])].filter((x) => x && x !== short);
+  areas.push({ code: r.code, name: short, type: "region", parent_code: "000000000", aliases });
+}
 
-  const towns = await get(`/provinces/${provCode}/cities-municipalities/`);
-  for (const t of towns) {
-    areas.push({
-      code: t.code,
-      name: clean(t.name),
-      type: t.isCity ? "city" : "municipality",
-      parent_code: prov.code,
-      aliases: ALIASES[t.code] ?? [],
-    });
-  }
+const provinces = await get("/provinces/");
+for (const p of provinces.sort((a, b) => a.name.localeCompare(b.name))) {
+  areas.push({ code: p.code, name: clean(p.name), type: "province", parent_code: p.regionCode, aliases: [`${clean(p.name)} province`] });
+}
+areas.push(METRO_MANILA);
+const provinceByName = new Map(provinces.map((p) => [clean(p.name), p.code]));
+
+const towns = await get("/cities-municipalities/");
+for (const t of towns.sort((a, b) => a.code.localeCompare(b.code))) {
+  let parent = t.provinceCode || null;
+  if (!parent && t.regionCode === "130000000") parent = METRO_MANILA.code;
+  if (!parent) parent = provinceByName.get(PLACE_IN[clean(t.name)]) ?? t.regionCode;
+  areas.push({ code: t.code, name: clean(t.name), type: t.isCity ? "city" : "municipality", parent_code: parent, aliases: ALIASES[t.code] ?? [] });
 }
 
 await mkdir("src/data", { recursive: true });
 await mkdir("supabase/seed", { recursive: true });
-await writeFile("src/data/areas.json", JSON.stringify(areas, null, 2) + "\n");
+await writeFile("src/data/areas.json", JSON.stringify(areas) + "\n");
 
 const q = (s) => (s === null ? "null" : `'${String(s).replace(/'/g, "''")}'`);
 const arr = (a) => `array[${a.map(q).join(", ")}]::text[]`;
-const rows = areas.map((a) => `  (${q(a.code)}, ${q(a.name)}, ${q(a.type)}, ${q(a.parent_code)}, ${arr(a.aliases)})`);
+// Parents must exist before children (parent_code is a foreign key): national → regions → provinces → towns
+const order = { national: 0, region: 1, province: 2, city: 3, municipality: 3 };
+const sorted = [...areas].sort((a, b) => order[a.type] - order[b.type]);
+const rows = sorted.map((a) => `  (${q(a.code)}, ${q(a.name)}, ${q(a.type)}, ${q(a.parent_code)}, ${arr(a.aliases)})`);
 const sql = `-- Generated by scripts/build-areas.mjs — do not edit by hand.
 insert into areas (code, name, type, parent_code, aliases) values
 ${rows.join(",\n")}
@@ -70,4 +91,5 @@ on conflict (code) do update set name = excluded.name, type = excluded.type,
 `;
 await writeFile("supabase/seed/0001_areas.sql", sql);
 
-console.log(`Wrote ${areas.length} areas.`);
+const count = (type) => areas.filter((a) => a.type === type).length;
+console.log(`Wrote ${areas.length} areas: ${count("region")} regions, ${count("province")} provinces, ${count("city")} cities, ${count("municipality")} municipalities.`);

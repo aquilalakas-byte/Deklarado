@@ -8,6 +8,8 @@ const BY_CODE = new Map(AREAS.map((a) => [a.code, a]));
 const COORDS = coordinates as Record<string, { lat: number; lng: number }>;
 
 export const NATIONAL_CODE = "000000000";
+/** Pampanga — the pilot province, shown first in the area pickers. */
+export const DEFAULT_PROVINCE = "035400000";
 
 export function getArea(code: string | null | undefined): Area | undefined {
   return code ? BY_CODE.get(code) : undefined;
@@ -69,9 +71,9 @@ function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
 
 /**
  * Guess the user's town from GPS: the nearest town center. Runs entirely on the device.
- * Returns null when the nearest town is far away (outside the pilot area).
+ * Returns null when the nearest town center is far away (e.g. outside the Philippines).
  */
-export function nearestTown(lat: number, lng: number, maxKm = 20): { area: Area; km: number } | null {
+export function nearestTown(lat: number, lng: number, maxKm = 40): { area: Area; km: number } | null {
   let best: { area: Area; km: number } | null = null;
   for (const [code, point] of Object.entries(COORDS)) {
     const area = getArea(code);

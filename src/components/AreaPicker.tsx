@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { displayName, getArea, nearestTown, provincesOf, regions, townsOf } from "@/lib/areas";
+import { DEFAULT_PROVINCE, displayName, getArea, nearestTown, provincesOf, regions, townsOf } from "@/lib/areas";
 import { useT } from "@/lib/i18n";
 import { LocateIcon } from "./Icons";
 
@@ -10,13 +10,12 @@ type Props = { value: string | null; onChange: (code: string) => void };
 /** "Use my location" button + Region → Province → City/Town dropdowns. */
 export function AreaPicker({ value, onChange }: Props) {
   const current = getArea(value);
-  const currentProvince = current?.parent_code ?? provincesOf(regions()[0]?.code ?? "")[0]?.code ?? "";
-  const [province, setProvince] = useState(currentProvince);
+  const [province, setProvince] = useState(current?.parent_code ?? DEFAULT_PROVINCE);
+  const [region, setRegion] = useState(getArea(current?.parent_code ?? DEFAULT_PROVINCE)?.parent_code ?? "");
   const { t } = useT();
   const [locating, setLocating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const region = getArea(province)?.parent_code ?? regions()[0]?.code ?? "";
 
   function useMyLocation() {
     if (!("geolocation" in navigator)) {
@@ -34,6 +33,7 @@ export function AreaPicker({ value, onChange }: Props) {
           return;
         }
         setProvince(hit.area.parent_code ?? province);
+        setRegion(getArea(hit.area.parent_code)?.parent_code ?? region);
         onChange(hit.area.code);
         setMessage(t("area.found", { town: displayName(hit.area) }));
       },
@@ -66,7 +66,7 @@ export function AreaPicker({ value, onChange }: Props) {
       <div className="grid gap-3">
         <label className="grid gap-1 text-sm font-medium">
           {t("area.region")}
-          <select className={select} value={region} disabled>
+          <select className={select} value={region} onChange={(e) => { setRegion(e.target.value); setProvince(provincesOf(e.target.value)[0]?.code ?? ""); }}>
             {regions().map((r) => <option key={r.code} value={r.code}>{displayName(r)}</option>)}
           </select>
         </label>

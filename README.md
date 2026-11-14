@@ -1,7 +1,8 @@
 # Deklarado
 
-A free PWA that checks trusted sources for class and work suspensions in Pampanga and sends push
-notifications. The full plan is in [docs/PLAN.md](docs/PLAN.md).
+A free PWA that checks trusted sources for class and work suspensions in the Philippines and sends push
+notifications. Coverage is hybrid: the whole country through national sources (GMA News, PAGASA, DepEd),
+with Pampanga as the pilot area where LGU websites are also read. The full plan is in [docs/PLAN.md](docs/PLAN.md).
 
 ## Folder guide
 
@@ -11,7 +12,8 @@ notifications. The full plan is in [docs/PLAN.md](docs/PLAN.md).
 | `src/components` | Reusable pieces (status card, announcement card, area picker, navigation) |
 | `src/lib` | App logic: areas and location, dates, suspension status rules, saved settings, demo data |
 | `scanner/` | The automatic scanner (see below) |
-| `src/data/areas.json` | Pampanga cities/towns with PSGC codes |
+| `src/data/areas.json` | All 1,734 areas (regions, provinces, Metro Manila, 1,634 cities/towns) with PSGC codes |
+| `src/data/coordinates.json` | Center point of each city/town, for "Use my location" (on the device only) |
 | `scripts/` | Helper scripts (e.g. rebuilding the area list) |
 | `supabase/migrations` | Database tables — run once in Supabase |
 | `supabase/seed` | Starting data (areas, sources) — run after the tables |
@@ -41,6 +43,8 @@ notifications. The full plan is in [docs/PLAN.md](docs/PLAN.md).
 | `npm run dev` | Start the app on your computer |
 | `npm run build` | Check that the app builds without errors |
 | `node scripts/build-areas.mjs` | Rebuild the area list from the PSGC API |
+| `node scripts/build-coordinates.mjs` | Look up missing town center points (OpenStreetMap, ~1 per second) |
+| `node scripts/load-areas.mjs` | Load the area list into Supabase (same as running `supabase/seed/0001_areas.sql`) |
 | `npm test` | Run all scanner tests |
 | `npm run scan:dry` | Read all sources and show what the scanner finds, without saving |
 | `node scanner/run.ts --dry --only rss` | Run one stage only (`gma`, `pagasa` or `rss`) |
@@ -53,9 +57,9 @@ notifications. The full plan is in [docs/PLAN.md](docs/PLAN.md).
 
 | Stage | Source | What it does |
 |---|---|---|
-| `gma` | GMA News Walang Pasok tracker | Reads suspension lists; `scanner/classify.ts` finds Pampanga entries |
-| `pagasa` | PAGASA Tropical Cyclone Bulletins (PDF) | Works out the Wind Signal for each town (`scanner/sources/pagasa.ts`) → `wind_signals` table |
-| `rss` | Official websites: San Fernando, Angeles, Guagua, Lubao, DepEd | Reads posts; `scanner/classify-post.ts` picks out suspension announcements |
+| `gma` | GMA News Walang Pasok tracker | Reads suspension lists; `scanner/classify.ts` matches places anywhere in the Philippines (shared town names like "San Jose" need the province) |
+| `pagasa` | PAGASA Tropical Cyclone Bulletins (PDF) | Works out the Wind Signal for every town in the country (`scanner/sources/pagasa.ts`) → `wind_signals` table |
+| `rss` | Official websites: San Fernando, Angeles, Guagua, Lubao (pilot area), DepEd (nationwide) | Reads posts; `scanner/classify-post.ts` picks out suspension announcements |
 
 Website list: `scanner/sources/registry.ts` (keep in sync with `supabase/seed/0002_sources.sql`).
 Some sites can't be read automatically — Mabalacat, Apalit, DepEd Region III, PIA (blocked by bot
@@ -74,7 +78,7 @@ add these secrets in **GitHub → repo → Settings → Secrets and variables �
 - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (for notifications)
 
 After saving, the scanner sends push notifications for new announcements (`scanner/notify.ts`):
-a town's announcement goes to people in that town, a province's to everyone in the province, a
+a town's announcement goes to people in that town, a province's or region's to everyone in it, a
 nationwide one to everyone — only if the school levels match. Each announcement is sent once.
 
 ## App features

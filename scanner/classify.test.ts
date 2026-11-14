@@ -60,18 +60,53 @@ test("San Fernando, Pampanga is matched, with its Facebook link", () => {
   assert.match(a[0].lguPostUrl!, /facebook\.com/);
 });
 
-test("other provinces' look-alike towns are NOT matched", () => {
-  assert.equal(run(`<p>San Luis, Batangas - all levels public and private</p>`).length, 0);
-  assert.equal(run(`<p>City of San Fernando, La Union - all levels</p>`).length, 0);
-  assert.equal(run(`<p>Sto. Tomas, Batangas - all levels</p>`).length, 0);
-  assert.equal(run(`<p>Taal, Batangas - all levels, public and private</p>`).length, 0);
+const parentOf = (code: string) => AREAS.find((x) => x.code === code)?.parent_code;
+const BATANGAS = AREAS.find((x) => x.type === "province" && x.name === "Batangas")!.code;
+const LA_UNION = AREAS.find((x) => x.type === "province" && x.name === "La Union")!.code;
+const CEBU = AREAS.find((x) => x.type === "province" && x.name === "Cebu")!.code;
+
+test("look-alike towns go to the right province", () => {
+  const sl = run(`<p>San Luis, Batangas - all levels public and private</p>`);
+  assert.equal(sl.length, 1);
+  assert.equal(parentOf(sl[0].areaCode), BATANGAS);
+  const sf = run(`<p>City of San Fernando, La Union - all levels</p>`);
+  assert.equal(sf.length, 1);
+  assert.equal(parentOf(sf[0].areaCode), LA_UNION);
+  assert.notEqual(sf[0].areaCode, SAN_FERNANDO);
+  assert.equal(parentOf(run(`<p>Sto. Tomas, Batangas - all levels</p>`)[0].areaCode), BATANGAS);
+  assert.equal(run(`<p>Taal, Batangas - all levels, public and private</p>`)[0].areaName, "Taal");
+});
+
+test("shared town names without a province are skipped", () => {
+  assert.equal(run(`<p>San Jose - all levels</p>`).length, 0);
+  assert.equal(run(`<p>San Fernando - all levels</p>`).length, 0);
 });
 
 test("province heading gives context to plain town names", () => {
   const a = run(`<p>PAMPANGA</p><p>San Luis - all levels</p><p>Lubao - Kinder to Grade 6, public</p><p>BATANGAS</p><p>San Luis - all levels</p>`);
-  assert.deepEqual(a.map((x) => x.areaName), ["San Luis", "Lubao"]);
+  assert.deepEqual(a.map((x) => x.areaName), ["San Luis", "Lubao", "San Luis"]);
+  assert.equal(parentOf(a[0].areaCode), PAMPANGA);
+  assert.equal(parentOf(a[2].areaCode), BATANGAS);
   assert.deepEqual(a[1].levels, ["kinder", "elementary"]);
   assert.equal(a[1].sector, "public");
+});
+
+test("nationwide: cities, Metro Manila, provinces and regions", () => {
+  // The province after the comma is never read as a town ("Cebu" ≠ Cebu City)
+  const t = run(`<p>Talisay, Cebu - all levels</p>`);
+  assert.equal(t.length, 1);
+  assert.equal(parentOf(t[0].areaCode), CEBU);
+  assert.equal(t[0].areaName, "City of Talisay");
+  assert.equal(run(`<p>Cebu City - all levels</p>`)[0].areaName, "City of Cebu");
+  assert.equal(run(`<p>Cebu - all levels</p>`)[0].areaCode, CEBU);
+  // "Quezon City" is unique even though "Quezon" is a province and many towns
+  assert.equal(run(`<p>Quezon City - all levels, public and private</p>`)[0].areaName, "Quezon City");
+  // Longest name wins: San Jose del Monte is not "San Jose"
+  assert.deepEqual(run(`<p>City of San Jose del Monte, Bulacan - all levels</p>`).map((x) => x.areaName), ["City of San Jose Del Monte"]);
+  // Metro Manila cities and the whole region
+  assert.deepEqual(run(`<p>METRO MANILA</p><p>Manila - all levels</p><p>San Juan City - all levels</p>`).map((x) => x.areaName), ["City of Manila", "City of San Juan"]);
+  assert.equal(run(`<p>Metro Manila - all levels, public and private</p>`)[0].areaName, "Metro Manila");
+  assert.equal(run(`<p>CALABARZON - all levels</p>`)[0].areaName, "Region IV-A");
 });
 
 test("unique Pampanga towns match without the province name", () => {
@@ -93,10 +128,10 @@ test("individual schools are ignored", () => {
 
 test("Filipino articles: places as bullets, '--' separator", () => {
   const a = run(`<p>Suspendido ang klase sa ilang lugar.</p><ul> <li><a href="https://www.facebook.com/x">Guagua, Pampanga</a>-- all levels, public and private, shift to online alternative modes of learning</li> <li><a href="https://www.facebook.com/y">Tiwi, Albay</a>-- all levels</li> <li>Apalit, Pampanga &mdash; Kinder hanggang Grade 6</li></ul>`);
-  assert.deepEqual(a.map((x) => x.areaName), ["Guagua", "Apalit"]);
+  assert.deepEqual(a.map((x) => x.areaName), ["Guagua", "Tiwi", "Apalit"]);
   assert.equal(a[0].f2fOnly, true);
   assert.equal(a[0].lguPostUrl, "https://www.facebook.com/x");
-  assert.deepEqual(a[1].levels, ["kinder", "elementary"]);
+  assert.deepEqual(a[2].levels, ["kinder", "elementary"]);
 });
 
 test("special non-working day", () => {

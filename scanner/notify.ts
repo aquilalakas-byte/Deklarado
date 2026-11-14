@@ -62,9 +62,13 @@ const langOf = (l?: string | null): Lang => (l === "fil" ? "fil" : "en");
 
 // ─── Pure helpers (tested in notify.test.ts) ─────────────────────────────────
 
-/** Every area code inside `code`, including itself. */
+/** Every area code inside `code`, including itself. (Cached: with ~1,700 areas this is called a lot.) */
+const insideCache = new Map<string, Set<string>>();
 export function insideCodes(code: string): Set<string> {
+  const hit = insideCache.get(code);
+  if (hit) return hit;
   const out = new Set([code]);
+  insideCache.set(code, out);
   let grew = true;
   while (grew) {
     grew = false;
@@ -85,6 +89,7 @@ function placeName(code: string, lang: Lang): string {
   if (!a) return "?";
   if (a.type === "national") return tx.nationwide;
   if (a.type === "province") return tx.wholeProvince(a.name);
+  if (a.type === "region") return a.aliases[0] ?? a.name;
   const m = a.name.match(/^City of (.+)$/);
   return m ? `${m[1]} City` : a.name;
 }

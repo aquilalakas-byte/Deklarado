@@ -60,7 +60,7 @@ async function scanGma(client: SupabaseClient | null, db: DB | null) {
     if (client && db && source) await db.markChecked(client, source.id, (e as Error).message);
     throw e;
   }
-  console.log(`  ${found} Pampanga announcement(s) from GMA.`);
+  console.log(`  ${found} announcement(s) from GMA.`);
 }
 
 // ─── Stage: official websites (RSS) ──────────────────────────────────────────

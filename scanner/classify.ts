@@ -183,57 +183,86 @@ export function parseLine(text: string): ParsedLine | null {
   };
 }
 
-// ─── Matching to our areas (Pampanga pilot) ─────────────────────────────────
+// ─── Matching to our areas (whole Philippines) ───────────────────────────────
+//
+// Each city/town can be written several ways ("San Fernando", "San Fernando City", "City of San Fernando",
+// aliases like "CSFP"). A way of writing is UNIQUE when only one town in the country uses it and it is not
+// also a province or region name. A unique name matches on its own; a shared name (there are 10 "San Jose"s)
+// only matches when the town's province is written in the line or in the heading above it.
 
-type Matcher = { area: Area; names: string[]; needsProvince: boolean };
+type NameForm = { text: string; unique: boolean };
+type Matcher = { area: Area; forms: NameForm[]; context: string[] };
+type Matchers = { towns: Matcher[]; provinces: Area[]; regions: { area: Area; names: string[] }[]; national: Area | undefined };
 
-// Town names that also exist in other provinces. These only count when "Pampanga"
-// is in the line or in the heading above it — so "San Luis, Batangas" isn't mistaken for Pampanga.
-const AMBIGUOUS = new Set(["san fernando", "san luis", "san simon", "santa ana", "santa rita", "santo tomas", "mexico"]);
+const stripCity = (s: string) => s.replace(/^city of /, "").replace(/ city$/, "");
+const stripProvince = (s: string) => s.replace(/province( of)?/g, "").replace(/(entire|whole|buong|lalawigan ng)/g, "").replace(/s+/g, " ").trim();
 
-export function buildMatchers(areas: Area[]): { towns: Matcher[]; provinces: Area[]; national: Area | undefined } {
-  const towns: Matcher[] = [];
-  for (const a of areas) {
-    if (a.type !== "city" && a.type !== "municipality") continue;
-    const base = norm(a.name).replace(/^city of /, "").replace(/ city$/, "");
-    const names = new Set([base, ...a.aliases.map((x) => norm(x.split(",")[0]).replace(/^city of /, "").replace(/ city$/, ""))]);
-    towns.push({ area: a, names: [...names].filter(Boolean), needsProvince: AMBIGUOUS.has(base) });
-  }
-  return {
-    towns,
-    provinces: areas.filter((a) => a.type === "province"),
-    national: areas.find((a) => a.type === "national"),
-  };
+const matcherCache = new WeakMap<Area[], Matchers>();
+
+export function buildMatchers(areas: Area[]): Matchers {
+  const cached = matcherCache.get(areas);
+  if (cached) return cached;
+  const byCode = new Map(areas.map((a) => [a.code, a]));
+  const provinces = areas.filter((a) => a.type === "province");
+  const regions = areas.filter((a) => a.type === "region").map((r) => ({ area: r, names: [r.name, ...r.aliases].map(norm) }));
+  const reserved = new Set([...provinces.flatMap((p) => [norm(p.name), ...p.aliases.map((x) => stripProvince(norm(x)))]), ...regions.flatMap((r) => r.names)]);
+
+  // Every way each town is written, then count how many towns share each one.
+  const raw = areas.filter((a) => a.type === "city" || a.type === "municipality").map((a) => {
+    const full = norm(a.name);
+    const base = stripCity(full);
+    const set = new Set([full, base, ...a.aliases.map((x) => norm(x.split(",")[0])), ...a.aliases.map((x) => stripCity(norm(x.split(",")[0])))]);
+    if (a.type === "city") { set.add(`${base} city`); set.add(`city of ${base}`); }
+    return { area: a, names: [...set].filter(Boolean) };
+  });
+  const count = new Map<string, number>();
+  for (const t of raw) for (const n of t.names) count.set(n, (count.get(n) ?? 0) + 1);
+
+  const towns: Matcher[] = raw.map(({ area, names }) => {
+    const prov = byCode.get(area.parent_code ?? "");
+    const context = prov ? [norm(prov.name), ...prov.aliases.map((x) => stripProvince(norm(x)))].filter(Boolean) : [];
+    return { area, context, forms: names.map((text) => ({ text, unique: count.get(text) === 1 && !reserved.has(text) })) };
+  });
+  const m = { towns, provinces, regions, national: areas.find((a) => a.type === "national") };
+  matcherCache.set(areas, m);
+  return m;
 }
 
-export function matchAreas(place: string, heading: string, m: ReturnType<typeof buildMatchers>): Area[] {
+export function matchAreas(place: string, heading: string, m: Matchers): Area[] {
   const p = norm(place);
-  const ctx = `${p} ${norm(heading)}`;
+  const ctx = ` ${p} ${norm(heading)} `;
   if (SCHOOL_WORDS.test(place)) return []; // a single school, not a whole town
 
-  if (/\b(nationwide|buong bansa|all over the country|entire country)\b/.test(p) && m.national) return [m.national];
+  if (/(nationwide|buong bansa|all over the country|entire country)/.test(p) && m.national) return [m.national];
 
-  const hits: Area[] = [];
+  // Whole province or region: the place part is just its name, e.g. "Pampanga" / "Province of Pampanga" / "Metro Manila"
+  const stripped = stripProvince(p);
   for (const prov of m.provinces) {
-    const pn = norm(prov.name);
-    if (!hasWord(ctx, pn)) continue;
-    // Whole province: the place part is just the province, e.g. "Pampanga" / "Pampanga province" / "Province of Pampanga"
-    const stripped = p.replace(/\bprovince( of)?\b/g, "").replace(/\b(entire|whole|buong|lalawigan ng)\b/g, "").trim();
-    if (stripped === pn) return [prov];
+    const names = [norm(prov.name), ...prov.aliases.map((x) => stripProvince(norm(x)))];
+    if (names.includes(stripped)) return [prov];
   }
+  for (const r of m.regions) if (r.names.includes(stripped)) return [r.area];
+
+  // Town: match against the part before the first comma ("Talisay, Cebu" → "talisay"), so the province
+  // name after the comma is never mistaken for a town (e.g. "Cebu" for Cebu City).
+  const townPart = norm(place.split(",")[0]);
+  let best: { area: Area; len: number }[] = [];
   for (const t of m.towns) {
-    if (!t.names.some((n) => hasWord(p, n))) continue;
-    if (t.needsProvince) {
-      const provName = norm(m.provinces.find((x) => x.code === t.area.parent_code)?.name ?? "");
-      if (!provName || !hasWord(ctx, provName)) continue;
+    for (const f of t.forms) {
+      if (!hasWord(townPart, f.text)) continue;
+      if (!f.unique && !t.context.some((c) => ctx.includes(` ${c} `))) continue;
+      best.push({ area: t.area, len: f.text.length });
     }
-    hits.push(t.area);
   }
-  return hits;
+  if (!best.length) return [];
+  // "San Jose del Monte" also contains "San Jose" — keep only the longest (most specific) match.
+  const longest = Math.max(...best.map((b) => b.len));
+  best = best.filter((b) => b.len === longest);
+  return [...new Map(best.map((b) => [b.area.code, b.area])).values()];
 }
 
 /** "Iloilo City", "City of San Fernando, Pampanga", "Lubao" → true.  "ALBAY", "PAMPANGA", "Metro Manila" → false. */
-function isTownHeading(text: string, m: ReturnType<typeof buildMatchers>): boolean {
+function isTownHeading(text: string, m: Matchers): boolean {
   if (/\b(city|municipality|bayan|lungsod)\b/i.test(text)) return true;
   return matchAreas(text, "", m).some((a) => a.type === "city" || a.type === "municipality");
 }
